@@ -1,6 +1,5 @@
-# id_generator.py
-
 import uuid
+import hashlib
 from typing import Set
 
 class IDGenerator:
@@ -14,14 +13,14 @@ class IDGenerator:
     @classmethod
     def generate_id(cls) -> str:
         """
-        Generate a new UUID4 and store it in the class-level set, ensuring no duplicates.
+        Generate a new short unique ID, ensuring no duplicates.
         """
         while True:
-            new_id = str(uuid.uuid4())
+            # Generate a UUID4 and take only the first 10 characters
+            new_id = uuid.uuid4().hex[:10]  # Convert to hex and truncate to 10 chars
             if new_id not in cls._generated_ids:
                 cls._generated_ids.add(new_id)
                 return new_id
-            # Extremely unlikely to collide, but keep trying if it does.
 
     @classmethod
     def has_id(cls, identity: str) -> bool:
