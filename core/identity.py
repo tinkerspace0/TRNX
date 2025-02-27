@@ -1,7 +1,9 @@
+# id_generator.py
+
 import uuid
 from typing import Set
 
-class GlobalIDGenerator:
+class IDGenerator:
     """
     A 'static' or 'global' ID generator using class variables.
     This version checks for collisions both on generation and on registration.
@@ -19,7 +21,7 @@ class GlobalIDGenerator:
             if new_id not in cls._generated_ids:
                 cls._generated_ids.add(new_id)
                 return new_id
-            # If there's a collision, keep generating until you find a unique one.
+            # Extremely unlikely to collide, but keep trying if it does.
 
     @classmethod
     def has_id(cls, identity: str) -> bool:
