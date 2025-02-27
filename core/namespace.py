@@ -1,5 +1,6 @@
 from core.identity import IDGenerator
 from core.debug.logger import logger
+from core.debug.profiler import Profiler
 
 class Namespace:
     """
@@ -11,6 +12,7 @@ class Namespace:
     'ns_id' is a unique ID from IDGenerator (optional for internal usage).
     """
 
+    @Profiler.profile   
     def __init__(self, ns_id: str = None):
         self._ns_id = ns_id or IDGenerator.generate_id()
         self._children_ns = {}    # name -> Namespace
@@ -18,6 +20,7 @@ class Namespace:
 
         logger.info(f"Namespace created with ID: {self._ns_id}")
 
+    @Profiler.profile   
     def create_namespace(self, name: str) -> "Namespace":
         """
         Explicitly create a sub-namespace under 'name' (if not already created).
@@ -32,6 +35,7 @@ class Namespace:
 
         return self._children_ns[name]
 
+    @Profiler.profile   
     def remove_namespace(self, name: str):
         """
         Remove a child namespace and all of its contents.
@@ -43,6 +47,7 @@ class Namespace:
         del self._children_ns[name]
         logger.info(f"Namespace '{name}' removed.")
 
+    @Profiler.profile   
     def set_item(self, name: str, value):
         """
         Store 'value' (any Python object) under 'name'.
@@ -55,6 +60,7 @@ class Namespace:
         self._children_items[name] = value
         logger.debug(f"Item '{name}' set in namespace with value: {value}")
 
+    @Profiler.profile   
     def get_item(self, name: str):
         """
         Retrieve the item under 'name'.
@@ -66,6 +72,7 @@ class Namespace:
         logger.debug(f"Item '{name}' accessed in namespace.")
         return self._children_items[name]
 
+    @Profiler.profile   
     def remove_item(self, name: str):
         """
         Delete an item under 'name'.
@@ -77,6 +84,7 @@ class Namespace:
         del self._children_items[name]
         logger.info(f"Item '{name}' removed from namespace.")
 
+    @Profiler.profile   
     def list_contents(self):
         """
         Returns (list_of_subnamespace_names, list_of_item_names).
@@ -84,67 +92,6 @@ class Namespace:
         namespaces, items = list(self._children_ns.keys()), list(self._children_items.keys())
         logger.debug(f"Namespace listing: {namespaces}, Items: {items}")
         return namespaces, items
-
-    def __getattr__(self, name: str):
-        """
-        Dot-access for getting:
-          - If 'name' is a namespace, return it.
-          - If 'name' is an item, return the value.
-          - If 'name' does not exist, automatically create a new namespace and return it.
-        """
-        if name.startswith("_"):
-            raise AttributeError(f"Private attribute '{name}' not accessible.")
-
-        if name in self._children_ns:
-            return self._children_ns[name]
-        if name in self._children_items:
-            return self._children_items[name]
-
-        self._children_ns[name] = Namespace()
-        logger.info(f"Namespace '{name}' auto-created via dot-access.")
-        return self._children_ns[name]
-
-    def __setattr__(self, name: str, value):
-        """
-        Dot-access for setting:
-          - namespace.item_name = some_value  (sets an item)
-          - namespace.item_name = None        (removes the item)
-        """
-        if name.startswith("_"):
-            super().__setattr__(name, value)
-            return
-
-        if value is None:
-            self.remove_item(name)
-            return
-
-        if name in self._children_ns:
-            logger.error(f"Cannot overwrite namespace '{name}' with an item.")
-            raise AttributeError(f"Cannot overwrite sub-namespace '{name}' with an item.")
-
-        self._children_items[name] = value
-        logger.debug(f"Item '{name}' set via dot-access with value: {value}")
-
-    def __delattr__(self, name: str):
-        """
-        Allows 'del namespace.name' to remove a sub-namespace or an item.
-        """
-        if name.startswith("_"):
-            super().__delattr__(name)
-            return
-
-        if name in self._children_ns:
-            del self._children_ns[name]
-            logger.info(f"Namespace '{name}' deleted via dot-access.")
-            return
-
-        if name in self._children_items:
-            del self._children_items[name]
-            logger.info(f"Item '{name}' deleted via dot-access.")
-            return
-
-        logger.error(f"No attribute '{name}' found to delete.")
-        raise AttributeError(f"No attribute '{name}' found to delete.")
 
 class RootNamespace:
     """
@@ -154,6 +101,7 @@ class RootNamespace:
 
     _instance = None
 
+    @Profiler.profile   
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(RootNamespace, cls).__new__(cls)
@@ -176,6 +124,7 @@ class RootNamespace:
         else:
             setattr(self._root, name, value)
 
+    @Profiler.profile   
     def create_namespace(self, name: str) -> Namespace:
         """
         Create a new namespace under the root namespace.

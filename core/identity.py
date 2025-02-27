@@ -2,7 +2,7 @@ import uuid
 import hashlib
 from typing import Set
 from core.debug.logger import logger  
-
+from core.debug.profiler import Profiler
 
 class IDGenerator:
     """
@@ -13,6 +13,7 @@ class IDGenerator:
     _generated_ids: Set[str] = set()
 
     @classmethod
+    @Profiler.profile
     def generate_id(cls) -> str:
         """
         Generate a new short unique ID, ensuring no duplicates.
@@ -26,6 +27,7 @@ class IDGenerator:
             logger.warning(f"ID collision detected for {new_id}, retrying...")
 
     @classmethod
+    @Profiler.profile
     def has_id(cls, identity: str) -> bool:
         """Check if an ID has already been generated."""
         exists = identity in cls._generated_ids
@@ -33,6 +35,7 @@ class IDGenerator:
         return exists
 
     @classmethod
+    @Profiler.profile
     def register_id(cls, identity: str) -> None:
         """
         Register an externally provided ID into the generator's set.
