@@ -1,66 +1,120 @@
 import json
 import os
+import threading
 from core.debug.logger import logger
-from core.debug.profiler import Profiler
 
 class ConfigManager:
-    """Handles loading, saving, and updating configuration files."""
-    
-    CONFIG_FILE = "config.json"
+    """Manages both general and component-specific configuration files with per-file locks."""
 
-    def __init__(self):
-        logger.info("Initializing ConfigManager...")
-        self.config = self._load_config()
+    ROOT_CONFIG_PATH = "configs/"  # General bot configs
+    MODULE_CONFIG_PATH = "modules/"  # Component-specific configs
 
-    @Profiler.profile  # ⏱️ Profile execution time
-    def _load_config(self):
-        """Load configuration from a JSON file."""
-        if not os.path.exists(self.CONFIG_FILE):
-            logger.warning(f"Configuration file '{self.CONFIG_FILE}' not found. Using default config.")
-            return {}  # Return empty config if file doesn't exist
-        try:
-            with open(self.CONFIG_FILE, "r") as f:
-                data = json.load(f)
-                logger.info(f"Configuration loaded successfully from '{self.CONFIG_FILE}'.")
-                return data
-        except Exception as e:
-            logger.error(f"Failed to load config file: {e}")
-            return {}
+    _loaded_configs = {}  # Cache for in-memory config modifications
+    _locks = {}  # Dictionary of locks per config file
 
-    @Profiler.profile  # ⏱️ Profile execution time
-    def save_config(self):
-        """Save the current configuration to the file."""
-        try:
-            with open(self.CONFIG_FILE, "w") as f:
-                json.dump(self.config, f, indent=4)
-            logger.info(f"Configuration saved successfully to '{self.CONFIG_FILE}'.")
-        except Exception as e:
-            logger.error(f"Failed to save config file: {e}")
+    @staticmethod
+    def _get_config_path(config_name: str, module: str = None):
+        """Determine the correct file path for a config."""
+        if module:
+            return os.path.join(ConfigManager.MODULE_CONFIG_PATH, module, f"{config_name}.json")
+        return os.path.join(ConfigManager.ROOT_CONFIG_PATH, f"{config_name}.json")
 
-    @Profiler.profile  # ⏱️ Profile execution time
-    def get(self, key, default=None):
-        """Retrieve a configuration value using dot notation."""
-        keys = key.split(".")
-        data = self.config
-        for k in keys:
-            if k in data:
-                data = data[k]
-            else:
-                logger.warning(f"Config key '{key}' not found. Returning default: {default}")
-                return default
-        logger.debug(f"Retrieved config value for '{key}': {data}")
-        return data
+    @staticmethod
+    def _get_lock(config_file: str):
+        """Retrieve or create a lock for a specific config file."""
+        if config_file not in ConfigManager._locks:
+            ConfigManager._locks[config_file] = threading.Lock()
+        return ConfigManager._locks[config_file]
 
-    @Profiler.profile  # ⏱️ Profile execution time
-    def set(self, key, value):
-        """Update a configuration value using dot notation."""
-        keys = key.split(".")
-        data = self.config
-        for k in keys[:-1]:
-            data = data.setdefault(k, {})
-        data[keys[-1]] = value
-        self.save_config()
-        logger.info(f"Updated config key '{key}' with value: {value}")
+    @staticmethod
+    def load_config(config_name: str, module: str = None):
+        """
+        Load a JSON config file dynamically in a thread-safe way.
 
-# Global instance
-config = ConfigManager()
+        Args:
+            config_name (str): The name of the config file (without .json extension).
+            module (str, optional): If specified, loads from the module folder.
+
+        Returns:
+            dict: The loaded configuration dictionary.
+        """
+        config_file = ConfigManager._get_config_path(config_name, module)
+
+        # Use per-file lock
+        with ConfigManager._get_lock(config_file):
+            if config_file in ConfigManager._loaded_configs:
+                return ConfigManager._loaded_configs[config_file]
+
+            if not os.path.exists(config_file):
+                logger.error(f"Config file {config_file} not found.")
+                return {}
+
+            try:
+                with open(config_file, "r") as file:
+                    data = json.load(file)
+                    ConfigManager._loaded_configs[config_file] = data
+                    logger.info(f"Loaded config: {config_file}")
+                    return data
+            except Exception as e:
+                logger.error(f"Failed to load {config_file}: {e}")
+                return {}
+
+    @staticmethod
+    def get(config_name: str, key: str, default=None, module: str = None):
+        """
+        Get a specific config value from a configuration file in a thread-safe way.
+
+        Args:
+            config_name (str): The name of the config file (without .json extension).
+            key (str): The key to retrieve.
+            default: The default value if key is not found.
+            module (str, optional): If specified, loads from the module folder.
+
+        Returns:
+            Any: The retrieved config value or default.
+        """
+        config = ConfigManager.load_config(config_name, module)
+        return config.get(key, default)
+
+    @staticmethod
+    def set(config_name: str, key: str, value, module: str = None):
+        """
+        Modify a config value in memory in a thread-safe way.
+
+        Args:
+            config_name (str): The name of the config file (without .json extension).
+            key (str): The key to update.
+            value: The new value to set.
+            module (str, optional): If specified, updates in the module folder.
+        """
+        config_file = ConfigManager._get_config_path(config_name, module)
+
+        with ConfigManager._get_lock(config_file):
+            if config_file not in ConfigManager._loaded_configs:
+                ConfigManager.load_config(config_name, module)
+
+            ConfigManager._loaded_configs[config_file][key] = value
+            logger.info(f"Updated config: {config_name} -> {key}: {value}")
+
+    @staticmethod
+    def save(config_name: str, module: str = None):
+        """
+        Save the updated config back to its JSON file in a thread-safe way.
+
+        Args:
+            config_name (str): The name of the config file (without .json extension).
+            module (str, optional): If specified, saves in the module folder.
+        """
+        config_file = ConfigManager._get_config_path(config_name, module)
+
+        with ConfigManager._get_lock(config_file):
+            if config_file not in ConfigManager._loaded_configs:
+                logger.error(f"Cannot save {config_name}. It was not loaded.")
+                return
+
+            try:
+                with open(config_file, "w") as file:
+                    json.dump(ConfigManager._loaded_configs[config_file], file, indent=4)
+                    logger.info(f"Saved config: {config_file}")
+            except Exception as e:
+                logger.error(f"Failed to save {config_file}: {e}")
