@@ -4,6 +4,7 @@ import numpy as np
 from multiprocessing import shared_memory, Lock
 from core.identity import IDGenerator
 import threading
+import atexit
 
 class SharedMemoryManager:
     """
@@ -22,6 +23,8 @@ class SharedMemoryManager:
             if cls._instance is None:
                 cls._instance = super(SharedMemoryManager, cls).__new__(cls)
                 cls._instance._initialize()
+                # Register cleanup when the program exits
+                atexit.register(cls._instance.unlink_all)
         return cls._instance
 
     def _initialize(self):
