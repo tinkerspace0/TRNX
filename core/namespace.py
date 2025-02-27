@@ -1,5 +1,5 @@
 from core.identity import IDGenerator
-from core.debug.logger import logger  # 🔥 Import logger
+from core.debug.logger import logger
 
 class Namespace:
     """

@@ -1,6 +1,8 @@
 import uuid
 import hashlib
 from typing import Set
+from core.debug.logger import logger  
+
 
 class IDGenerator:
     """
@@ -16,16 +18,19 @@ class IDGenerator:
         Generate a new short unique ID, ensuring no duplicates.
         """
         while True:
-            # Generate a UUID4 and take only the first 10 characters
             new_id = uuid.uuid4().hex[:10]  # Convert to hex and truncate to 10 chars
             if new_id not in cls._generated_ids:
                 cls._generated_ids.add(new_id)
+                logger.debug(f"Generated new unique ID: {new_id}")
                 return new_id
+            logger.warning(f"ID collision detected for {new_id}, retrying...")
 
     @classmethod
     def has_id(cls, identity: str) -> bool:
         """Check if an ID has already been generated."""
-        return identity in cls._generated_ids
+        exists = identity in cls._generated_ids
+        logger.debug(f"Checked existence of ID '{identity}': {'Exists' if exists else 'Does not exist'}")
+        return exists
 
     @classmethod
     def register_id(cls, identity: str) -> None:
@@ -34,5 +39,8 @@ class IDGenerator:
         Raises a ValueError if the ID is already in use.
         """
         if identity in cls._generated_ids:
+            logger.error(f"Attempted to register duplicate ID: {identity}")
             raise ValueError(f"ID '{identity}' is already registered.")
+
         cls._generated_ids.add(identity)
+        logger.info(f"Registered new ID: {identity}")
