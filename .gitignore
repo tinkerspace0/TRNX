@@ -173,3 +173,4 @@ cython_debug/
 
 # VSCode file
 .vscode
+logs/profiler.json
