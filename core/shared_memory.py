@@ -143,3 +143,34 @@ class SharedMemoryManager:
         for name in list(self._blocks.keys()):
             self.unlink_block(name)
         logger.info("All shared memory blocks unlinked and deleted.")
+
+
+    def __getattr__(self, name: str):
+        """Enable dot-access retrieval of shared memory blocks."""
+        if name in self._blocks:
+            return self.read(name)
+        logger.error(f"No shared memory block named '{name}' found during dot-access.")
+        raise AttributeError(f"No shared memory block named '{name}'")
+
+    def __setattr__(self, name: str, value):
+        """Enable dot-access creation of shared memory blocks."""
+        if name.startswith("_"):
+            super().__setattr__(name, value)
+            return
+
+        if not isinstance(value, np.ndarray):
+            logger.error(f"Invalid assignment to shared memory block '{name}'. Must be a NumPy array.")
+            raise ValueError(f"Assigned value must be a NumPy array. Got {type(value)} instead.")
+
+        if name in self._blocks:
+            self.write(name, value)
+        else:
+            self.create_block(name, value)
+
+    def __delattr__(self, name: str):
+        """Enable `del manager.some_block` to remove shared memory."""
+        if name in self._blocks:
+            self.unlink_block(name)
+        else:
+            logger.error(f"No shared memory block named '{name}' found during deletion.")
+            raise AttributeError(f"No shared memory block named '{name}' to delete.")
