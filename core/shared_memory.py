@@ -1,8 +1,7 @@
-# shared_memory.py
-
 import numpy as np
 from multiprocessing import shared_memory, Lock
 from core.identity import IDGenerator
+from core.debug.logger import logger  # 🔥 Import logger
 import threading
 import atexit
 
@@ -25,6 +24,7 @@ class SharedMemoryManager:
                 cls._instance._initialize()
                 # Register cleanup when the program exits
                 atexit.register(cls._instance.unlink_all)
+                logger.info("SharedMemoryManager initialized.")
         return cls._instance
 
     def _initialize(self):
@@ -32,144 +32,134 @@ class SharedMemoryManager:
         self._blocks = {}  # Stores name -> (SharedMemory instance, shape, dtype, block_id)
         self._id_map = {}  # Stores block_id -> name
         self._locks = {}   # Stores name -> Lock
+        logger.debug("SharedMemoryManager storage initialized.")
 
     def create_block(self, name: str, data: np.ndarray) -> str:
         """
         Create a new shared memory block with a given name and return its block ID.
         """
         if name in self._blocks:
+            logger.warning(f"Attempted to create block '{name}', but it already exists.")
             raise ValueError(f"Block '{name}' already exists.")
 
         block_id = IDGenerator.generate_id()
         shape, dtype = data.shape, data.dtype
         nbytes = np.prod(shape) * dtype.itemsize
 
-        shm = shared_memory.SharedMemory(name=block_id, create=True, size=nbytes)
-        array = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
-        np.copyto(array, data)
+        try:
+            shm = shared_memory.SharedMemory(name=block_id, create=True, size=nbytes)
+            array = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
+            np.copyto(array, data)
 
-        # Store under the given name
-        self._blocks[name] = (shm, shape, dtype, block_id)
-        self._id_map[block_id] = name
-        self._locks[name] = Lock()
+            self._blocks[name] = (shm, shape, dtype, block_id)
+            self._id_map[block_id] = name
+            self._locks[name] = Lock()
 
-        return block_id  # Returns ID for external reference
+            logger.info(f"Shared memory block '{name}' created (ID: {block_id}, Size: {nbytes} bytes).")
+            return block_id
+        except Exception as e:
+            logger.error(f"Failed to create shared memory block '{name}': {e}")
+            raise
 
     def get_block(self, name: str) -> np.ndarray:
-        """
-        Returns a NumPy array referencing the shared memory block.
-        """
+        """Returns a NumPy array referencing the shared memory block."""
         if name not in self._blocks:
+            logger.error(f"Block '{name}' not found during get_block().")
             raise KeyError(f"Block '{name}' not found.")
 
         shm, shape, dtype, _ = self._blocks[name]
+        logger.debug(f"Shared memory block '{name}' accessed.")
         return np.ndarray(shape, dtype=dtype, buffer=shm.buf)
 
-    def get_block_by_id(self, block_id: str) -> np.ndarray:
-        """
-        Retrieve a shared memory block using its block ID.
-        """
-        if block_id not in self._id_map:
-            raise KeyError(f"Block ID '{block_id}' not found.")
-
-        name = self._id_map[block_id]
-        return self.get_block(name)
-
     def write(self, name: str, data: np.ndarray):
-        """
-        Write new data to an existing shared memory block.
-        """
+        """Write new data to an existing shared memory block."""
         if name not in self._blocks:
+            logger.error(f"Block '{name}' not found during write().")
             raise KeyError(f"Block '{name}' not found.")
 
         shm, shape, dtype, _ = self._blocks[name]
 
         if data.shape != shape or data.dtype != dtype:
+            logger.error(f"Incompatible shape or dtype for block '{name}'. Expected {shape}, got {data.shape}.")
             raise ValueError("Incompatible shape or dtype for shared memory block.")
 
         with self._locks[name]:
             np.copyto(np.ndarray(shape, dtype=dtype, buffer=shm.buf), data)
+            logger.debug(f"Data written to shared memory block '{name}'.")
 
     def read(self, name: str) -> np.ndarray:
-        """
-        Read and return a copy of the shared memory block data.
-        """
+        """Read and return a copy of the shared memory block data."""
         if name not in self._blocks:
+            logger.error(f"Block '{name}' not found during read().")
             raise KeyError(f"Block '{name}' not found.")
 
         shm, shape, dtype, _ = self._blocks[name]
         with self._locks[name]:
+            logger.debug(f"Data read from shared memory block '{name}'.")
             return np.ndarray(shape, dtype=dtype, buffer=shm.buf).copy()
 
     def close_block(self, name: str):
-        """
-        Close a shared memory block but do not remove it.
-        """
+        """Close a shared memory block but do not remove it."""
         if name in self._blocks:
             block_id = self._blocks[name][3]
             self._blocks[name][0].close()
             del self._blocks[name]
             del self._id_map[block_id]
             del self._locks[name]
+            logger.info(f"Shared memory block '{name}' closed.")
 
     def unlink_block(self, name: str):
-        """
-        Permanently remove a shared memory block from the OS.
-        """
+        """Permanently remove a shared memory block from the OS."""
         if name in self._blocks:
             block_id = self._blocks[name][3]
-            self._blocks[name][0].close()
-            self._blocks[name][0].unlink()
-            del self._blocks[name]
-            del self._id_map[block_id]
-            del self._locks[name]
+            try:
+                self._blocks[name][0].close()
+                self._blocks[name][0].unlink()
+                del self._blocks[name]
+                del self._id_map[block_id]
+                del self._locks[name]
+                logger.info(f"Shared memory block '{name}' unlinked and deleted from the OS.")
+            except Exception as e:
+                logger.error(f"Failed to unlink block '{name}': {e}")
 
     def close_all(self):
-        """
-        Close all shared memory blocks without deleting them.
-        """
+        """Close all shared memory blocks without deleting them."""
         for name in list(self._blocks.keys()):
             self.close_block(name)
+        logger.info("All shared memory blocks closed.")
 
     def unlink_all(self):
-        """
-        Close and permanently delete all shared memory blocks.
-        """
+        """Close and permanently delete all shared memory blocks."""
         for name in list(self._blocks.keys()):
             self.unlink_block(name)
+        logger.info("All shared memory blocks unlinked and deleted.")
 
     def __getattr__(self, name: str):
-        """
-        Enable dot-access retrieval of shared memory blocks.
-        Example: `data = manager.some_block`
-        """
+        """Enable dot-access retrieval of shared memory blocks."""
         if name in self._blocks:
             return self.read(name)
+        logger.error(f"No shared memory block named '{name}' found during dot-access.")
         raise AttributeError(f"No shared memory block named '{name}'")
 
     def __setattr__(self, name: str, value):
-        """
-        Enable dot-access creation of shared memory blocks.
-        Example: `manager.some_block = np.array([...])`
-        """
+        """Enable dot-access creation of shared memory blocks."""
         if name.startswith("_"):
             super().__setattr__(name, value)
             return
 
         if not isinstance(value, np.ndarray):
+            logger.error(f"Invalid assignment to shared memory block '{name}'. Must be a NumPy array.")
             raise ValueError(f"Assigned value must be a NumPy array. Got {type(value)} instead.")
 
-        # Create or overwrite block
         if name in self._blocks:
             self.write(name, value)
         else:
             self.create_block(name, value)
 
     def __delattr__(self, name: str):
-        """
-        Enable `del manager.some_block` to remove shared memory.
-        """
+        """Enable `del manager.some_block` to remove shared memory."""
         if name in self._blocks:
             self.unlink_block(name)
         else:
+            logger.error(f"No shared memory block named '{name}' found during deletion.")
             raise AttributeError(f"No shared memory block named '{name}' to delete.")
