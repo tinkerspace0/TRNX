@@ -3,7 +3,9 @@ from core.debug.logger import logger
 from core.debug.profiler import Profiler
 
 class ExchangeInterface(ABC):
-    """Abstract interface for fetching essential market data from an exchange."""
+    """
+    Abstract interface for fetching essential market data from an exchange.
+    """
 
     @Profiler.profile
     @abstractmethod
@@ -31,7 +33,11 @@ class ExchangeInterface(ABC):
             limit (int, optional): Number of candles to retrieve. Default is 100.
 
         Returns:
-            list: List of OHLCV data as `[timestamp, open, high, low, close, volume]`.
+            list: List of OHLCV data in the format:
+            [
+                [timestamp, open, high, low, close, volume],
+                ...
+            ]
         """
         pass
 
@@ -46,8 +52,133 @@ class ExchangeInterface(ABC):
             limit (int, optional): Number of recent trades to retrieve. Default is 20.
 
         Returns:
-            list: List of recent trades as
-            `[{"timestamp": int, "price": float, "quantity": float, "side": "buy" or "sell"}, ...]`
+            list: List of recent trades as:
+            [
+                {"timestamp": int, "price": float, "quantity": float, "side": "buy" or "sell"},
+                ...
+            ]
+        """
+        pass
+
+    @Profiler.profile
+    @abstractmethod
+    def fetch_order_book(self, symbol: str, depth: int = 10):
+        """
+        Fetch the current order book depth for a given trading pair.
+
+        Args:
+            symbol (str): The trading pair (e.g., "BTCUSDT").
+            depth (int, optional): Number of levels to retrieve from the order book. Default is 10.
+
+        Returns:
+            dict: {
+                "bids": [[price, quantity], ...],
+                "asks": [[price, quantity], ...]
+            }
+        """
+        pass
+
+    @Profiler.profile
+    @abstractmethod
+    def fetch_market_status(self):
+        """
+        Fetch the exchange market status (e.g., maintenance mode, operational status).
+
+        Returns:
+            dict: {"status": str, "message": str}
+        """
+        pass
+
+    @Profiler.profile
+    @abstractmethod
+    def fetch_24h_volume(self, symbol: str):
+        """
+        Fetch the 24-hour trading volume for a given asset.
+
+        Args:
+            symbol (str): The trading pair (e.g., "BTCUSDT").
+
+        Returns:
+            dict: {"symbol": str, "volume": float}
+        """
+        pass
+from abc import ABC, abstractmethod
+from core.debug.logger import logger
+from core.debug.profiler import Profiler
+
+class ExchangeInterface(ABC):
+    """
+    Abstract interface for fetching essential market data from an exchange.
+    """
+
+    @Profiler.profile
+    @abstractmethod
+    def fetch_ticker(self, symbol: str):
+        """
+        Fetch the latest price for a given trading pair.
+
+        Args:
+            symbol (str): The trading pair (e.g., "BTCUSDT").
+
+        Returns:
+            dict: {"symbol": str, "price": float}
+        """
+        pass
+
+    @Profiler.profile
+    @abstractmethod
+    def fetch_ohlcv(self, symbol: str, timeframe: str, limit: int = 100):
+        """
+        Fetch historical OHLCV (candlestick) data.
+
+        Args:
+            symbol (str): The trading pair (e.g., "BTCUSDT").
+            timeframe (str): The candlestick timeframe (e.g., "1m", "1h", "1d").
+            limit (int, optional): Number of candles to retrieve. Default is 100.
+
+        Returns:
+            list: List of OHLCV data in the format:
+            [
+                [timestamp, open, high, low, close, volume],
+                ...
+            ]
+        """
+        pass
+
+    @Profiler.profile
+    @abstractmethod
+    def fetch_recent_trades(self, symbol: str, limit: int = 20):
+        """
+        Fetch the most recent trades for a given trading pair.
+
+        Args:
+            symbol (str): The trading pair (e.g., "BTCUSDT").
+            limit (int, optional): Number of recent trades to retrieve. Default is 20.
+
+        Returns:
+            list: List of recent trades as:
+            [
+                {"timestamp": int, "price": float, "quantity": float, "side": "buy" or "sell"},
+                ...
+            ]
+        """
+        pass
+
+    @Profiler.profile
+    @abstractmethod
+    def fetch_order_book(self, symbol: str, depth: int = 10):
+        """
+        Fetch the current order book depth for a given trading pair.
+
+        Args:
+            symbol (str): The trading pair (e.g., "BTCUSDT").
+            depth (int, optional): Number of levels to retrieve from the order book. Default is 10.
+
+        Returns:
+            dict: {
+                "bids": [[price, quantity], ...],
+                "asks": [[price, quantity], ...]
+            }
         """
         pass
 
