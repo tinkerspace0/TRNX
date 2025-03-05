@@ -1,11 +1,11 @@
 import requests
 import numpy as np
-from modules.exchange.exchange_interface import ExchangeInterface
+from trenex.core.plugin import ExchangeInterface
 from core.utils.config_manager import ConfigManager
 from core.debug.logger import logger
 from core.debug.profiler import Profiler
-from core.shared_memory import SharedMemoryPort
-from core.namespace import RootNamespace
+from trenex.core.memory.shared_memory_port import SharedMemoryPort
+from trenex.core.utils.namespace import RootNamespace
 
 class BinanceExchange(ExchangeInterface):
     """Handles communication with Binance API and stores market data in shared memory."""

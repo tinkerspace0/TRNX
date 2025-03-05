@@ -1,7 +1,7 @@
-from core.identity import IDGenerator
+from trenex.core.utils.identity import IDGenerator
 from core.debug.logger import logger
 from core.debug.profiler import Profiler
-from core.shared_memory import SharedMemoryPort
+from trenex.core.memory.shared_memory_port import SharedMemoryPort
 
 class Namespace:
     """
