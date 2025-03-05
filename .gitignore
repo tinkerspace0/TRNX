@@ -173,4 +173,5 @@ cython_debug/
 
 # VSCode file
 .vscode
-logs/profiler.json
+logs/
+.DS_Store
