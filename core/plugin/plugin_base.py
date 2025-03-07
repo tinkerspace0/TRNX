@@ -4,6 +4,7 @@ from typing import Dict, Tuple
 import numpy as np
 from core.memory.shared_memory_port import SharedMemoryPort
 from core.utils.identity import IDGenerator
+from core.debug.logger import logger
 
 class Plugin(ABC):
     """
@@ -44,12 +45,22 @@ class Plugin(ABC):
         if not all([port in self._inputs for port in self._required_inputs]):
             raise ValueError("Not all required inputs set.")
 
-    def _write_output(self, output_name: str, data: np.ndarray) -> None:
-        if output_name in self._outputs and self._outputs[output_name] is not None:
-            self._outputs[output_name].write(data)
+    def _write_output(self, port_name: str, data):
+        """
+        Write data to an output port only if it is defined.
+        Converts the data to a NumPy array if necessary.
+        """
+        if port_name in self._outputs and self._outputs[port_name] is not None:
+            # Convert to np.array if not already
+            if not isinstance(data, np.ndarray):
+                # Use the expected dtype from the port's specification.
+                expected_dtype = self._outputs[port_name].dtype
+                data = np.array(data, dtype=expected_dtype)
+            self._outputs[port_name].write(data)
+            logger.info(f"Data written to output port '{port_name}'.")
         else:
-            raise ValueError(f"Output {output_name} not defined.")
-        
+            logger.info(f"Output port '{port_name}' not set. Data not written.")
+
     @abstractmethod
     def process(self) -> None:
         """

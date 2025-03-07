@@ -37,7 +37,7 @@ def create_template(plugin_name: str, plugin_type: str, output_dir: str) -> str:
         "name": plugin_name,
         "version": "0.1",
         "description": f"Template for a plugin of type {plugin_type}.",
-        "entry_point": f"{plugin_name}:{class_name}",
+        "entry_point": f"{plugin_name}.{plugin_name}:{class_name}",
         "author": "",
         "license": "MIT",
         "dependencies": []  # List any required packages for this plugin
