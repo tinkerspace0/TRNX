@@ -2,8 +2,8 @@ import numpy as np
 from multiprocessing import shared_memory, Lock
 import threading
 
-from trenex.core.utils.identity import IDGenerator
-from trenex.core.debug.profiler import Profiler
+from core.utils.identity import IDGenerator
+from core.debug.profiler import Profiler
 
 class SharedMemoryPort:
     """

@@ -1,8 +1,8 @@
 import uuid
 import hashlib
 from typing import Dict, Any, Optional
-from trenex.core.debug.logger import logger  
-from trenex.core.debug.profiler import Profiler
+from core.debug.logger import logger  
+from core.debug.profiler import Profiler
 
 class IDGenerator:
     """

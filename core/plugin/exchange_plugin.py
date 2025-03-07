@@ -2,7 +2,9 @@
 from abc import abstractmethod
 from typing import Dict, List
 from core.plugin.plugin_base import Plugin
-from core.debug.profiler import profile
+from core.debug.profiler import Profiler
+
+profile = Profiler.profile
 
 class ExchangeInterface(Plugin):
     """
