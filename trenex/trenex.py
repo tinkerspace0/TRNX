@@ -111,7 +111,7 @@ class Trenex:
         logger.info("Execution order computed: " + ", ".join(self.execution_order))
         return self.execution_order
 
-    def build(self):
+    def build_trnx(self):
         """
         Build the active TRNX bot:
           - Create shared memory ports for connected plugin outputs.
@@ -152,10 +152,12 @@ class Trenex:
             plugin.build()
         logger.info("TRNX built successfully.")
 
-    def get_trnx(self):
+    def get_trnx(self) -> TRNX:
         """
         Return the active TRNX bot.
         """
         if self._active_trnx is None:
             raise ValueError("No active TRNX.")
         return self._active_trnx
+
+trenex = Trenex()

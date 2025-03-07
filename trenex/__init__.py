@@ -1,1 +1,1 @@
-from .trenex import Trenex
+from .trenex import trenex
