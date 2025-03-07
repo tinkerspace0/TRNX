@@ -121,6 +121,10 @@ class Trenex:
                     input_plugin, _ = self._loaded_plugins[in_plugin]
                     input_plugin.set_input_port(in_port, port)
                     logger.info(f"Connected port {port_name} to {in_plugin}:{in_port}")
+        
+        # Call verify on each plugin.
+        for plugin, _ in self._loaded_plugins.values():
+            plugin.verify()
 
         # Compute execution order.
         sorted_plugin_names = self._compute_execution_order()
@@ -128,10 +132,7 @@ class Trenex:
         for pname in sorted_plugin_names:
             plugin_instance, _ = self._loaded_plugins[pname]
             ordered_plugins.append(plugin_instance)
-        # Call build/verify on each plugin (assuming a verify() method exists).
-        for plugin in ordered_plugins:
-            if hasattr(plugin, "verify"):
-                plugin.verify()
+
         self._trnx._plugins = ordered_plugins
         self._trnx._is_built = True
         logger.info("TRNX built successfully.")
