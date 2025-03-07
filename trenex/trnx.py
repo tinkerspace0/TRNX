@@ -14,6 +14,8 @@ class TRNX:
 
     def run(self):
         logger.info(f"Running TRNX bot: {self._name}")
+        if not self._is_built:
+            raise ValueError("TRNX is not built. Please build the TRNX first.")
         while True:
             for plugin in self._plugins:
                 logger.info(f"Executing plugin: {plugin.__class__.__name__}")

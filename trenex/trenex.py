@@ -152,6 +152,8 @@ class Trenex:
         # Call verify() on each plugin.
         for plugin in self._active_trnx.plugins:
             plugin.verify()
+        
+        self._active_trnx._is_built = True
         logger.info("TRNX built successfully.")
 
     def get_trnx(self) -> TRNX:
