@@ -37,7 +37,7 @@ def create_template(plugin_name: str, plugin_type: str, output_dir: str) -> str:
         "name": plugin_name,
         "version": "0.1",
         "description": f"Template for a plugin of type {plugin_type}.",
-        "entry_point": f"{plugin_name}.{plugin_name}:{class_name}",
+        "entry_point": f"{plugin_name}:{class_name}",
         "author": "",
         "license": "MIT",
         "dependencies": []  # List any required packages for this plugin
@@ -142,14 +142,17 @@ def package_plugin(plugin_folder: str) -> str:
     if not os.path.exists(plugin_folder):
         raise FileNotFoundError(f"Plugin folder '{plugin_folder}' does not exist.")
 
+    # Ensure the plugins directory exists
     plugins_dir = os.path.join(os.getcwd(), "plugins")
     os.makedirs(plugins_dir, exist_ok=True)
 
-    base_name = os.path.basename(plugin_folder)
+    base_name = os.path.basename(plugin_folder)  # e.g. "Binance"
     plg_filename = os.path.join(plugins_dir, f"{base_name}.plg")
 
-    # Create a zip archive directly as .plg
-    shutil.make_archive(plg_filename[:-4], 'zip', plugin_folder)
+    # Set the parent directory as root and base_dir as the plugin folder name.
+    parent_dir = os.path.dirname(plugin_folder)
+    # This creates an archive that, when extracted, will contain a folder "Binance" with the plugin files.
+    shutil.make_archive(plg_filename[:-4], 'zip', root_dir=parent_dir, base_dir=base_name)
 
     print(f"Plugin packaged as: {plg_filename}")
     return plg_filename

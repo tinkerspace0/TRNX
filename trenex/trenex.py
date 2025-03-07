@@ -46,9 +46,11 @@ class Trenex:
             raise ValueError("No active TRNX. Please start or set an active TRNX first.")
         plugin_instance = load_plugin(plugin_filepath)
         plugin_name = plugin_instance.__class__.__name__
-        trnx_name = self._active_trnx.name
+        trnx_name = self._active_trnx._name
+        plugin_instance._define_outputs()
+        plugin_instance._define_inputs()
         self._loaded_plugins[trnx_name][plugin_name] = (plugin_instance, plugin_filepath)
-        self._active_trnx.plugins.append(plugin_instance)
+        self._active_trnx._plugins.append(plugin_instance)
         logger.info(f"Loaded plugin {plugin_name} into TRNX {trnx_name}")
 
     def unload_plugin(self, plugin_name: str):
@@ -64,7 +66,7 @@ class Trenex:
     def connect_plugin_output_to_input(self, output_plugin: str, output_port: str, input_plugin: str, input_port: str):
         if self._active_trnx is None:
             raise ValueError("No active TRNX.")
-        trnx_name = self._active_trnx.name
+        trnx_name = self._active_trnx._name
         if output_plugin not in self._loaded_plugins[trnx_name]:
             raise ValueError(f"Output plugin {output_plugin} not loaded.")
         if input_plugin not in self._loaded_plugins[trnx_name]:
@@ -81,7 +83,7 @@ class Trenex:
         Compute the plugin execution order via topological sort.
         An edge from A to B indicates that B depends on A.
         """
-        trnx_name = self._active_trnx.name
+        trnx_name = self._active_trnx._name
         plugins = self._loaded_plugins[trnx_name]
         # Initialize graph
         dependency_graph = {p: set() for p in plugins.keys()}
@@ -121,7 +123,7 @@ class Trenex:
         """
         if self._active_trnx is None:
             raise ValueError("No active TRNX.")
-        trnx_name = self._active_trnx.name
+        trnx_name = self._active_trnx._name
 
         # Setup shared memory ports based on connections.
         for out_plugin, ports in self._plugin_connections[trnx_name].items():
@@ -147,9 +149,9 @@ class Trenex:
             ordered_plugins.append(plugin_instance)
         self._active_trnx.plugins = ordered_plugins
 
-        # Call build() on each plugin.
+        # Call verify() on each plugin.
         for plugin in self._active_trnx.plugins:
-            plugin.build()
+            plugin.verify()
         logger.info("TRNX built successfully.")
 
     def get_trnx(self) -> TRNX:

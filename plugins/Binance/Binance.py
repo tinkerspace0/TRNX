@@ -13,16 +13,15 @@ class Binance(ExchangeInterface):
             "OHLCV": ((100, 6), float),
             }
 
-    def build(self) -> None:
-        logger.info(f"{self.__class__.__name__} build complete.")
-
     def fetch_ticker(self, symbol: str) -> None:
         logger.info(f"Fetching ticker for {symbol}")
+        print("Fetching ticker for {symbol}")
         # Write ticker data to shared memory, e.g.:
         # self._outputs['ticker'].write(data)
 
     def fetch_ohlcv(self, symbol: str, timeframe: str, limit: int = 100) -> None:
         logger.info(f"Fetching OHLCV for {symbol}")
+        print("Fetching OHLCV for {symbol}")
         # Write OHLCV data to shared memory
 
     def fetch_recent_trades(self, symbol: str, limit: int = 20) -> None:
@@ -40,3 +39,8 @@ class Binance(ExchangeInterface):
     def fetch_24h_volume(self, symbol: str) -> None:
         logger.info(f"Fetching 24h volume for {symbol}")
         # Write 24h volume data to shared memory
+
+    def process(self) -> None:
+        print("Processing data")
+        self.fetch_ticker("BTCUSDT")
+        self.fetch_ohlcv("BTCUSDT", "1m")

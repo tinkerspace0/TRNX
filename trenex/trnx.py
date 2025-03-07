@@ -14,6 +14,7 @@ class TRNX:
 
     def run(self):
         logger.info(f"Running TRNX bot: {self._name}")
-        for plugin in self._plugins:
-            logger.info(f"Executing plugin: {plugin.__class__.__name__}")
-            plugin.process()
+        while True:
+            for plugin in self._plugins:
+                logger.info(f"Executing plugin: {plugin.__class__.__name__}")
+                plugin.process()
