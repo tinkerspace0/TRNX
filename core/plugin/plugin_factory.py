@@ -61,9 +61,6 @@ class {class_name}(ExchangeInterface):
         # Define provided output ports.
         self._provided_outputs = {{"ticker": ((2,), float)}}
 
-    def build(self) -> None:
-        logger.info(f"{{self.__class__.__name__}} build complete.")
-
     def fetch_ticker(self, symbol: str) -> None:
         logger.info(f"Fetching ticker for {{symbol}}")
         # Write ticker data to shared memory, e.g.:
