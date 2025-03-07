@@ -1,0 +1,9 @@
+{
+    "name": "Agent",
+    "version": "0.1",
+    "description": "Template for a plugin of type dataprocessor.",
+    "entry_point": "Agent.Agent:Agent",
+    "author": "",
+    "license": "MIT",
+    "dependencies": []
+}
