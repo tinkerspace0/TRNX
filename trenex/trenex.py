@@ -9,73 +9,58 @@ from trenex.trnx import TRNX
 
 class Trenex:
     """
-    Builder for TRNX trading bots.
+    Builder for a single TRNX trading bot.
     
     Use Trenex to create a new TRNX instance, load plugins from file,
     connect plugin outputs/inputs, compute the correct execution order, 
     and build the final TRNX bot.
     """
     def __init__(self):
-        self._trnxs = {}  # Dict[str, TRNX]
-        self._active_trnx = None
-        # For each TRNX, store loaded plugins: {plugin_name: (plugin_instance, plugin_filepath)}
-        self._loaded_plugins = {}  
-        # For each TRNX, store connection mappings:
-        # {output_plugin: {output_port: [(input_plugin, input_port), ...]}}
-        self._plugin_connections = {}  
-        self.execution_order = []  # Execution order (list of plugin names)
+        self._trnx = None           # The single TRNX instance
+        self._loaded_plugins = {}   # {plugin_name: (plugin_instance, plugin_filepath)}
+        self._plugin_connections = {}  # {output_plugin: {output_port: [(input_plugin, input_port), ...]}}
+        self.execution_order = []   # Execution order (list of plugin names)
 
     def start_new_trnx(self, name: str):
-        if name in self._trnxs:
-            raise ValueError(f"TRNX with name {name} already exists.")
-        new_trnx = TRNX(name)
-        self._trnxs[name] = new_trnx
-        self._loaded_plugins[name] = {}
-        self._plugin_connections[name] = {}
-        self._active_trnx = new_trnx
+        if self._trnx is not None:
+            raise ValueError("A TRNX instance already exists. Please reset the builder to start a new bot.")
+        self._trnx = TRNX(name)
+        self._loaded_plugins = {}
+        self._plugin_connections = {}
         logger.info(f"Started new TRNX: {name}")
 
-    def set_active_trnx(self, name: str):
-        if name not in self._trnxs:
-            raise ValueError(f"TRNX with name {name} does not exist.")
-        self._active_trnx = self._trnxs[name]
-        logger.info(f"Set active TRNX: {name}")
-
     def load_plugin(self, plugin_filepath: str):
-        if self._active_trnx is None:
-            raise ValueError("No active TRNX. Please start or set an active TRNX first.")
+        if self._trnx is None:
+            raise ValueError("No active TRNX. Please start a new TRNX first.")
         plugin_instance = load_plugin(plugin_filepath)
         plugin_name = plugin_instance.__class__.__name__
-        trnx_name = self._active_trnx._name
+        # Initialize plugin ports
         plugin_instance._define_outputs()
         plugin_instance._define_inputs()
-        self._loaded_plugins[trnx_name][plugin_name] = (plugin_instance, plugin_filepath)
-        self._active_trnx._plugins.append(plugin_instance)
-        logger.info(f"Loaded plugin {plugin_name} into TRNX {trnx_name}")
+        self._loaded_plugins[plugin_name] = (plugin_instance, plugin_filepath)
+        logger.info(f"Loaded plugin {plugin_name} into TRNX {self._trnx._name}")
 
     def unload_plugin(self, plugin_name: str):
-        if self._active_trnx is None:
+        if self._trnx is None:
             raise ValueError("No active TRNX.")
-        trnx_name = self._active_trnx.name
-        if plugin_name not in self._loaded_plugins[trnx_name]:
+        if plugin_name not in self._loaded_plugins:
             raise ValueError(f"Plugin {plugin_name} not found in active TRNX.")
-        plugin_instance, _ = self._loaded_plugins[trnx_name].pop(plugin_name)
-        self._active_trnx.plugins.remove(plugin_instance)
-        logger.info(f"Unloaded plugin {plugin_name} from TRNX {trnx_name}")
+        self._loaded_plugins.pop(plugin_name)
+        self._plugin_connections.pop(plugin_name, None)
+        logger.info(f"Unloaded plugin {plugin_name} from TRNX {self._trnx.name}")
 
-    def connect_plugin_output_to_input(self, output_plugin: str, output_port: str, input_plugin: str, input_port: str):
-        if self._active_trnx is None:
+    def define_plugin_output_to_input(self, output_plugin: str, output_port: str, input_plugin: str, input_port: str):
+        if self._trnx is None:
             raise ValueError("No active TRNX.")
-        trnx_name = self._active_trnx._name
-        if output_plugin not in self._loaded_plugins[trnx_name]:
+        if output_plugin not in self._loaded_plugins:
             raise ValueError(f"Output plugin {output_plugin} not loaded.")
-        if input_plugin not in self._loaded_plugins[trnx_name]:
+        if input_plugin not in self._loaded_plugins:
             raise ValueError(f"Input plugin {input_plugin} not loaded.")
-        if output_plugin not in self._plugin_connections[trnx_name]:
-            self._plugin_connections[trnx_name][output_plugin] = {}
-        if output_port not in self._plugin_connections[trnx_name][output_plugin]:
-            self._plugin_connections[trnx_name][output_plugin][output_port] = []
-        self._plugin_connections[trnx_name][output_plugin][output_port].append((input_plugin, input_port))
+        if output_plugin not in self._plugin_connections:
+            self._plugin_connections[output_plugin] = {}
+        if output_port not in self._plugin_connections[output_plugin]:
+            self._plugin_connections[output_plugin][output_port] = []
+        self._plugin_connections[output_plugin][output_port].append((input_plugin, input_port))
         logger.info(f"Connected {output_plugin}:{output_port} -> {input_plugin}:{input_port}")
 
     def _compute_execution_order(self):
@@ -83,16 +68,15 @@ class Trenex:
         Compute the plugin execution order via topological sort.
         An edge from A to B indicates that B depends on A.
         """
-        trnx_name = self._active_trnx._name
-        plugins = self._loaded_plugins[trnx_name]
-        # Initialize graph
+        plugins = self._loaded_plugins
+        # Initialize dependency graph
         dependency_graph = {p: set() for p in plugins.keys()}
         in_degree = {p: 0 for p in plugins.keys()}
 
         # Build graph from connection mappings
-        for out_plugin, ports in self._plugin_connections[trnx_name].items():
+        for out_plugin, ports in self._plugin_connections.items():
             for out_port, connections in ports.items():
-                for in_plugin, in_port in connections:
+                for in_plugin, _ in connections:
                     if in_plugin not in dependency_graph[out_plugin]:
                         dependency_graph[out_plugin].add(in_plugin)
                         in_degree[in_plugin] += 1
@@ -115,29 +99,26 @@ class Trenex:
 
     def build_trnx(self):
         """
-        Build the active TRNX bot:
+        Build the TRNX bot:
           - Create shared memory ports for connected plugin outputs.
           - Wire plugin outputs to inputs.
           - Compute execution order and reorder the plugin list.
-          - Call build() on each plugin.
+          - Call build() and verify() on each plugin.
         """
-        if self._active_trnx is None:
+        if self._trnx is None:
             raise ValueError("No active TRNX.")
-        trnx_name = self._active_trnx._name
-
         # Setup shared memory ports based on connections.
-        for out_plugin, ports in self._plugin_connections[trnx_name].items():
-            # Get the output plugin instance.
-            output_plugin, _ = self._loaded_plugins[trnx_name][out_plugin]
+        for out_plugin, ports in self._plugin_connections.items():
+            output_plugin, _ = self._loaded_plugins[out_plugin]
             for out_port, connections in ports.items():
-                # Assume _provided_outputs is defined by the plugin as (shape, dtype)
+                # Assume _provided_outputs is defined as (shape, dtype)
                 shape, dtype = output_plugin._provided_outputs[out_port]
                 port_name = f"{out_plugin}_{out_port}"
                 port = SharedMemoryPort(port_name, shape, dtype)
                 logger.info(f"Created port {port_name} with shape {shape} and dtype {dtype}")
                 output_plugin.set_output_port(out_port, port)
                 for in_plugin, in_port in connections:
-                    input_plugin, _ = self._loaded_plugins[trnx_name][in_plugin]
+                    input_plugin, _ = self._loaded_plugins[in_plugin]
                     input_plugin.set_input_port(in_port, port)
                     logger.info(f"Connected port {port_name} to {in_plugin}:{in_port}")
 
@@ -145,23 +126,20 @@ class Trenex:
         sorted_plugin_names = self._compute_execution_order()
         ordered_plugins = []
         for pname in sorted_plugin_names:
-            plugin_instance, _ = self._loaded_plugins[trnx_name][pname]
+            plugin_instance, _ = self._loaded_plugins[pname]
             ordered_plugins.append(plugin_instance)
-        self._active_trnx.plugins = ordered_plugins
-
-        # Call verify() on each plugin.
-        for plugin in self._active_trnx.plugins:
-            plugin.verify()
-        
-        self._active_trnx._is_built = True
+        # Call build/verify on each plugin (assuming a verify() method exists).
+        for plugin in ordered_plugins:
+            if hasattr(plugin, "verify"):
+                plugin.verify()
+        self._trnx._plugins = ordered_plugins
+        self._trnx._is_built = True
         logger.info("TRNX built successfully.")
 
     def get_trnx(self) -> TRNX:
         """
         Return the active TRNX bot.
         """
-        if self._active_trnx is None:
+        if self._trnx is None:
             raise ValueError("No active TRNX.")
-        return self._active_trnx
-
-trenex = Trenex()
+        return self._trnx

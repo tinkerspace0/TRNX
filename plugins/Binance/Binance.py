@@ -10,7 +10,7 @@ class Binance(ExchangeInterface):
         # Define provided output ports.
         self._provided_outputs = {
             "ticker": ((2,), float),
-            "OHLCV": ((100, 6), float),
+            "ohlcv": ((100, 6), float),
             }
 
     def fetch_ticker(self, symbol: str) -> None:

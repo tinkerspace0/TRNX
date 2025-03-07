@@ -1,15 +1,16 @@
 from core.plugin import Plugin
-from trenex import trenex
+from trenex import Trenex
 
 
 todo = 1
 
 if todo == 1:
+    trenex = Trenex()
     trenex.start_new_trnx("trnx1")
     trenex.load_plugin("plugins/Binance.zip")
     trenex.load_plugin("plugins/RSI.zip")
 
-    trenex.connect_plugin_output_to_input("Binance", "OHLCV", "Rsi", "ohlcv")
+    trenex.define_plugin_output_to_input("Binance", "OHLCV", "Rsi", "ohlcv")
 
     trenex.build_trnx()
     trenex.get_trnx().run()
