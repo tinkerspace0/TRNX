@@ -1,4 +1,4 @@
-# core/plugin/exchange_plugin.py
+# core/plugin/exchange_interface.py
 from abc import abstractmethod
 from typing import Dict, List
 from core.plugin.plugin_base import Plugin
