@@ -1,8 +1,8 @@
 import numpy as np
-from core.plugin.plugin_base import Plugin
+from core.plugin import Indicator
 from core.debug.logger import logger
 
-class Rsi(Plugin):
+class Rsi(Indicator):
     def _define_inputs(self) -> None:
         # Expecting OHLCV data: shape (100, 6), where column 4 is the close price.
         self._required_inputs = {"ohlcv": ((100, 6), float)}
@@ -11,7 +11,7 @@ class Rsi(Plugin):
         # The output "rsi" is a 1D array with 100 float values.
         self._provided_outputs = {"rsi": ((100,), float)}
 
-    def compute_rsi(self, prices: np.ndarray, period: int = 14) -> np.ndarray:
+    def compute(self, prices: np.ndarray, period: int = 14) -> np.ndarray:
         """
         Compute the Relative Strength Index (RSI) for an array of prices.
         prices: 1D numpy array of close prices.
@@ -60,7 +60,7 @@ class Rsi(Plugin):
             # Extract close prices (assuming column index 4 is 'close')
             closes = ohlcv[:, 4]
             # Compute RSI with a period of 14
-            rsi_values = self.compute_rsi(closes, period=14)
+            rsi_values = self.compute(closes, period=14)
             # Write RSI values to the output port "rsi"
             # Convert to list if necessary, depending on your shared memory port API
             self._write_output("rsi", rsi_values.tolist())
