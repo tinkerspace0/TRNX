@@ -106,6 +106,22 @@ def create_template(plugin_name: str, plugin_type: str, output_dir: str) -> str:
     print(f"Plugin template created at: {plugin_folder}")
     return plugin_folder
 
+def get_available_plugin_types() -> list:
+    """
+    Scan the core/plugin/types folder and return a list of available plugin types.
+    It looks for all .py files (excluding __init__.py) and returns their base names.
+    """
+    types_dir = os.path.join(os.path.dirname(__file__), "..", "types")
+    available_types = []
+    if os.path.exists(types_dir):
+        for fname in os.listdir(types_dir):
+            if fname.endswith(".py") and fname != "__init__.py":
+                base = os.path.splitext(fname)[0]
+                available_types.append(base)
+    else:
+        print(f"Types directory not found: {types_dir}")
+    return available_types
+
 def package_plugin(plugin_folder: str) -> str:
     """
     Package a plugin template folder into a .plg file.
