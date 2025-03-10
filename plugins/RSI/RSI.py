@@ -1,13 +1,16 @@
 import numpy as np
-from core.plugin import Indicator
+
+from core.plugin.types.data_plugins import DataPlugin
 from core.debug.logger import logger
 
-class Rsi(Indicator):
+class Rsi(DataPlugin):
     def _define_inputs(self) -> None:
+        logger.info('Executing _define_inputs in Rsi')
         # Expecting OHLCV data: shape (100, 6), where column 4 is the close price.
         self._required_inputs = {"ohlcv": ((100, 6), float)}
 
     def _define_outputs(self) -> None:
+        logger.info('Executing _define_outputs in Rsi')
         # The output "rsi" is a 1D array with 100 float values.
         self._provided_outputs = {"rsi": ((100,), float)}
 
@@ -47,8 +50,9 @@ class Rsi(Indicator):
         # Set the first 'period' values to 0 (undefined RSI)
         rsi[:period] = 0
         return rsi
-
+    
     def process(self) -> None:
+        logger.info('Executing process in Rsi')
         logger.info(f"{self.__class__.__name__} processing data.")
         try:
             # Read OHLCV data from the input port "ohlcv"
@@ -67,3 +71,4 @@ class Rsi(Indicator):
             logger.info(f"RSI computed and written: {rsi_values}")
         except Exception as e:
             logger.error(f"Error processing RSI: {e}")
+

@@ -1,14 +1,17 @@
+from typing import Dict, List
 import requests
 
-from core.plugin import ExchangeInterface
+from core.plugin.types.exchange_interface import ExchangeInterface
 from core.debug.logger import logger
+
 
 class Binance(ExchangeInterface):
     def _define_inputs(self) -> None:
-        # Define required input ports (if any).
+        logger.info('Executing _define_inputs in Binance')
         self._required_inputs = {}
 
     def _define_outputs(self) -> None:
+        logger.info('Executing _define_outputs in Binance')
         # Define provided output ports with their shapes and data types.
         # "ticker": 1 float value (e.g., price)
         # "ohlcv": 100 rows x 6 columns (open_time, open, high, low, close, volume)
@@ -25,22 +28,37 @@ class Binance(ExchangeInterface):
             "volume_24h": ((1,), float)
         }
 
-    def fetch_ticker(self, symbol: str) -> None:
-        logger.info(f"Fetching ticker for {symbol}")
+    def fetch_24h_volume(self, symbol: str) -> Dict[str, float]:
+        logger.info('Executing fetch_24h_volume in Binance')
+        logger.info(f"Fetching 24h volume for {symbol}")
         try:
             response = requests.get(
-                "https://api.binance.com/api/v3/ticker/price",
+                "https://api.binance.com/api/v3/ticker/24hr",
                 params={"symbol": symbol}
             )
             data = response.json()
-            price = float(data.get("price", 0))
-            ticker_data = [price]  # Expecting shape (1,)
-            self._write_output("ticker", ticker_data)
-            logger.info(f"Ticker data written: {ticker_data}")
+            volume = float(data.get("volume", 0))
+            self._write_output("volume_24h", [volume])
+            logger.info(f"24h volume data written: {volume}")
         except Exception as e:
-            logger.error(f"Error fetching ticker: {e}")
+            logger.error(f"Error fetching 24h volume: {e}")
 
-    def fetch_ohlcv(self, symbol: str, timeframe: str, limit: int = 100) -> None:
+
+    def fetch_market_status(self) -> Dict[str, str]:
+        logger.info('Executing fetch_market_status in Binance')
+        logger.info("Fetching market status")
+        try:
+            # Binance does not have a dedicated market status endpoint.
+            # We use exchangeInfo as a proxy. If successful, we assume the market is operational.
+            response = requests.get("https://api.binance.com/api/v3/exchangeInfo")
+            status = 1.0 if response.status_code == 200 else 0.0
+            self._write_output("market_status", [status])
+            logger.info("Market status data written.")
+        except Exception as e:
+            logger.error(f"Error fetching market status: {e}")
+
+    def fetch_ohlcv(self, symbol: str, timeframe: str, limit: int = 100) -> List[List[float]]:
+        logger.info('Executing fetch_ohlcv in Binance')
         logger.info(f"Fetching OHLCV for {symbol} with interval {timeframe}")
         try:
             response = requests.get(
@@ -61,33 +79,9 @@ class Binance(ExchangeInterface):
         except Exception as e:
             logger.error(f"Error fetching OHLCV: {e}")
 
-    def fetch_recent_trades(self, symbol: str, limit: int = 20) -> None:
-        logger.info(f"Fetching recent trades for {symbol}")
-        try:
-            response = requests.get(
-                "https://api.binance.com/api/v3/trades",
-                params={"symbol": symbol, "limit": limit}
-            )
-            data = response.json()  # List of trade objects.
-            trades_data = []
-            for trade in data:
-                # For each trade, extract: id, price, qty, quoteQty, time, isBuyerMaker (convert boolean to 1.0 or 0.0)
-                trade_id = float(trade.get("id", 0))
-                price = float(trade.get("price", 0))
-                qty = float(trade.get("qty", 0))
-                quoteQty = float(trade.get("quoteQty", 0))
-                trade_time = float(trade.get("time", 0))
-                isBuyerMaker = 1.0 if trade.get("isBuyerMaker", False) else 0.0
-                trades_data.append([trade_id, price, qty, quoteQty, trade_time, isBuyerMaker])
-            # Pad with zeros if fewer than 'limit' rows.
-            while len(trades_data) < limit:
-                trades_data.append([0.0] * 6)
-            self._write_output("recent_trades", trades_data)
-            logger.info("Recent trades data written.")
-        except Exception as e:
-            logger.error(f"Error fetching recent trades: {e}")
 
-    def fetch_order_book(self, symbol: str, depth: int = 10) -> None:
+    def fetch_order_book(self, symbol: str, depth: int = 10) -> Dict[str, List[List[float]]]:
+        logger.info('Executing fetch_order_book in Binance')
         logger.info(f"Fetching order book for {symbol}")
         try:
             response = requests.get(
@@ -116,31 +110,51 @@ class Binance(ExchangeInterface):
         except Exception as e:
             logger.error(f"Error fetching order book: {e}")
 
-    def fetch_market_status(self) -> None:
-        logger.info("Fetching market status")
-        try:
-            # Binance does not have a dedicated market status endpoint.
-            # We use exchangeInfo as a proxy. If successful, we assume the market is operational.
-            response = requests.get("https://api.binance.com/api/v3/exchangeInfo")
-            status = 1.0 if response.status_code == 200 else 0.0
-            self._write_output("market_status", [status])
-            logger.info("Market status data written.")
-        except Exception as e:
-            logger.error(f"Error fetching market status: {e}")
 
-    def fetch_24h_volume(self, symbol: str) -> None:
-        logger.info(f"Fetching 24h volume for {symbol}")
+    def fetch_recent_trades(self, symbol: str, limit: int = 20) -> List[Dict[str, float]]:
+        logger.info('Executing fetch_recent_trades in Binance')
+        logger.info(f"Fetching recent trades for {symbol}")
         try:
             response = requests.get(
-                "https://api.binance.com/api/v3/ticker/24hr",
+                "https://api.binance.com/api/v3/trades",
+                params={"symbol": symbol, "limit": limit}
+            )
+            data = response.json()  # List of trade objects.
+            trades_data = []
+            for trade in data:
+                # For each trade, extract: id, price, qty, quoteQty, time, isBuyerMaker (convert boolean to 1.0 or 0.0)
+                trade_id = float(trade.get("id", 0))
+                price = float(trade.get("price", 0))
+                qty = float(trade.get("qty", 0))
+                quoteQty = float(trade.get("quoteQty", 0))
+                trade_time = float(trade.get("time", 0))
+                isBuyerMaker = 1.0 if trade.get("isBuyerMaker", False) else 0.0
+                trades_data.append([trade_id, price, qty, quoteQty, trade_time, isBuyerMaker])
+            # Pad with zeros if fewer than 'limit' rows.
+            while len(trades_data) < limit:
+                trades_data.append([0.0] * 6)
+            self._write_output("recent_trades", trades_data)
+            logger.info("Recent trades data written.")
+        except Exception as e:
+            logger.error(f"Error fetching recent trades: {e}")
+
+
+    def fetch_ticker(self, symbol: str) -> Dict[str, float]:
+        logger.info('Executing fetch_ticker in Binance')
+        logger.info(f"Fetching ticker for {symbol}")
+        try:
+            response = requests.get(
+                "https://api.binance.com/api/v3/ticker/price",
                 params={"symbol": symbol}
             )
             data = response.json()
-            volume = float(data.get("volume", 0))
-            self._write_output("volume_24h", [volume])
-            logger.info(f"24h volume data written: {volume}")
+            price = float(data.get("price", 0))
+            ticker_data = [price]  # Expecting shape (1,)
+            self._write_output("ticker", ticker_data)
+            logger.info(f"Ticker data written: {ticker_data}")
         except Exception as e:
-            logger.error(f"Error fetching 24h volume: {e}")
+            logger.error(f"Error fetching ticker: {e}")
+
 
     def process(self) -> None:
         logger.info("Processing data in Binance plugin")

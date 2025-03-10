@@ -1,7 +1,7 @@
 {
     "name": "RSI",
     "version": "0.1",
-    "description": "Template for a plugin of type dataprocessor.",
+    "description": "Template for a plugin of type DataPlugin.",
     "entry_point": "RSI.RSI:Rsi",
     "author": "",
     "license": "MIT",
