@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import os
 
 from trenex import Trenex  # Your builder class from trenex.py
-from core.plugin.plugin_factory import create_template, package_plugin
+from core.plugin.utils.plugin_factory import create_template, package_plugin
 
 app = FastAPI(title="Trenex API", version="1.0")
 

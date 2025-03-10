@@ -3,8 +3,7 @@ import os
 from core.debug.logger import logger
 from core.memory.shared_memory_port import SharedMemoryPort
 from core.plugin.plugin_base import Plugin
-from core.plugin.plugin_factory import create_template, package_plugin
-from core.plugin.plugin_loader import load_plugin
+from core.plugin import load_plugin
 from trenex.trnx import TRNX
 
 class Trenex:
