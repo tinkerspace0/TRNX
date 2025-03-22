@@ -2,7 +2,7 @@ import time
 import functools
 import json
 import os
-from core.debug.logger import logger
+from core.debug.logger import gl_logger
 
 class Profiler:
     """
@@ -28,7 +28,7 @@ class Profiler:
         elapsed_time = time.perf_counter() - self.start_time
         log_entry = {"name": self.name, "execution_time": round(elapsed_time, 6)}
         
-        logger.info(f"[Profiler] {self.name} executed in {elapsed_time:.6f} seconds.")
+        gl_logger.info(f"[Profiler] {self.name} executed in {elapsed_time:.6f} seconds.")
         self._write_to_json(log_entry)
 
     @staticmethod
@@ -47,7 +47,7 @@ class Profiler:
             elapsed_time = time.perf_counter() - start_time
             
             log_entry = {"name": func.__name__, "execution_time": round(elapsed_time, 6)}
-            logger.info(f"[Profiler] Function '{func.__name__}' executed in {elapsed_time:.6f} seconds.")
+            gl_logger.info(f"[Profiler] Function '{func.__name__}' executed in {elapsed_time:.6f} seconds.")
             Profiler._write_to_json(log_entry)
             
             return result
@@ -71,4 +71,4 @@ class Profiler:
             with open(Profiler.JSON_FILE, "w") as f:
                 json.dump(data, f, indent=4)  # Write back updated log
         except Exception as e:
-            logger.error(f"[Profiler] Failed to write to JSON: {e}")
+            gl_logger.error(f"[Profiler] Failed to write to JSON: {e}")
