@@ -1,7 +1,7 @@
 import uuid
 import hashlib
 from typing import Dict, Any, Optional
-from core.debug.logger import logger  
+from core.debug.logger import gl_logger
 from core.debug.profiler import Profiler
 
 class IDGenerator:
@@ -28,9 +28,9 @@ class IDGenerator:
             new_id = uuid.uuid4().hex[:10]  # Generate a UUID4, take the first 10 hex characters.
             if new_id not in cls._generated_ids:
                 cls._generated_ids[new_id] = id_object  # Associate the object with the new ID.
-                logger.debug(f"Generated new unique ID: {new_id}")
+                gl_logger.debug(f"Generated new unique ID: {new_id}")
                 return new_id
-            logger.warning(f"ID collision detected for {new_id}, retrying...")
+            gl_logger.warning(f"ID collision detected for {new_id}, retrying...")
 
     @classmethod
     @Profiler.profile
@@ -59,7 +59,7 @@ class IDGenerator:
             bool: True if the ID exists, False otherwise.
         """
         exists = identity in cls._generated_ids
-        logger.debug(f"Checked existence of ID '{identity}': {'Exists' if exists else 'Does not exist'}")
+        gl_logger.debug(f"Checked existence of ID '{identity}': {'Exists' if exists else 'Does not exist'}")
         return exists
 
     @classmethod
@@ -77,8 +77,8 @@ class IDGenerator:
             ValueError: If the ID is already registered.
         """
         if identity in cls._generated_ids:
-            logger.error(f"Attempted to register duplicate ID: {identity}")
+            gl_logger.error(f"Attempted to register duplicate ID: {identity}")
             raise ValueError(f"ID '{identity}' is already registered.")
 
         cls._generated_ids[identity] = id_object
-        logger.info(f"Registered new ID: {identity}")
+        gl_logger.info(f"Registered new ID: {identity}")
