@@ -1,80 +1,166 @@
-from dataclasses import dataclass, field
-from typing import Dict, Tuple, Any
-import numpy as np
+from typing import Dict, Tuple, Any, List
 
-# TODO: Add type hints to the methods and parameters.
-# TODO: Split by inheriting Parameters into seperate classes for static and dynamic variables.
+# ---------------------------
+# Param and Parameters Classes
+# ---------------------------
 
 class Param:
     """
     Represents an individual parameter.
-    
+
     Attributes:
-      - name: Name of the parameter.
-      - dtype: Data type (e.g. int, float).
-      - allowed_range: Optional tuple (min, max) for a continuous range.
-      - allowed_values: Optional list of discrete allowed values.
-      - default_value: Default value.
-      - description: Description of the parameter.
+      name: Name of the parameter.
+      dtype: Data type of the parameter.
+      allowed_range: Optional tuple (min, max) for a continuous range.
+      allowed_values: Optional list of allowed values.
+      value: The current value of the parameter.
+      description: Description of the parameter.
     """
-    def __init__(self, name: str, dtype: Any, default_value: Any = None,
-                 allowed_range: Tuple[Any, Any] = None, allowed_values: list = None,
-                 description: str = ""):
-        self.name = name
-        self.dtype = dtype
-        self.allowed_range = allowed_range
-        self.allowed_values = allowed_values
-        self.default_value = default_value
-        self.description = description
+    def __init__(self, name: str, dtype: type, default_value: Any = None,
+                 allowed_range: Tuple[Any, Any] = None, allowed_values: List[Any] = None,
+                 description: str = "") -> None:
+        # Set attributes bypassing our overridden __setattr__
+        super().__setattr__("name", name)
+        super().__setattr__("dtype", dtype)
+        super().__setattr__("allowed_range", allowed_range)
+        super().__setattr__("allowed_values", allowed_values)
+        super().__setattr__("description", description)
+        # Use our __setattr__ to set the value (which validates)
         self.value = default_value
+
+    def set_allowed_range(self, new_range: Tuple[Any, Any]) -> None:
+        """Update the allowed range for this parameter."""
+        self.allowed_range = new_range
+
+    def set_allowed_values(self, new_values: List[Any]) -> None:
+        """Update the allowed values for this parameter."""
+        self.allowed_values = new_values
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        if key == "value":
+            if not isinstance(value, self.dtype):
+                raise ValueError(f"Value for '{self.name}' must be of type {self.dtype.__name__}, got {type(value).__name__}.")
+            if self.allowed_range is not None:
+                min_val, max_val = self.allowed_range
+                if not (min_val <= value <= max_val):
+                    raise ValueError(f"Value for '{self.name}' must be between {min_val} and {max_val}.")
+            if self.allowed_values is not None:
+                if value not in self.allowed_values:
+                    raise ValueError(f"Value for '{self.name}' must be one of {self.allowed_values}.")
+        super().__setattr__(key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, Param):
+            return self.value == other.value
+        return self.value == other
+
+    def __lt__(self, other: Any) -> bool:
+        if isinstance(other, Param):
+            return self.value < other.value
+        return self.value < other
+
+    def __le__(self, other: Any) -> bool:
+        if isinstance(other, Param):
+            return self.value <= other.value
+        return self.value <= other
+
+    def __gt__(self, other: Any) -> bool:
+        if isinstance(other, Param):
+            return self.value > other.value
+        return self.value > other
+
+    def __ge__(self, other: Any) -> bool:
+        if isinstance(other, Param):
+            return self.value >= other.value
+        return self.value >= other
+
+    def __repr__(self) -> str:
+        return f"Param(name={self.name}, value={self.value}, dtype={self.dtype.__name__})"
 
 class Parameters:
     """
     Holds individual parameters as attributes.
-    Use add_param() to add a parameter. They can then be accessed as attributes.
+    
+    Use add_param() to add a parameter. Once added, the parameter can be accessed and updated directly.
+    
+    Example:
+        params = Parameters()
+        params.add_param(Param("limit", int, default_value=100))
+        print(params.limit)   # prints 100
+        params.limit = 150    # updates the value to 150
+        params.new_param = 42 # automatically creates a new Param for 'new_param' with type int and value 42.
     """
-    def __init__(self):
-        pass
+    def __init__(self) -> None:
+        # Internal dictionary to track Param objects.
+        self.__dict__["_params"] = {}
 
     def add_param(self, param: Param) -> None:
-        setattr(self, param.name, param)
+        self._params[param.name] = param
+        super().__setattr__(param.name, param)
 
     def get(self, name: str) -> Any:
-        param = getattr(self, name, None)
-        if param is not None:
-            return param.default_value
-        else:
-            raise KeyError(f"Parameter '{name}' not found.")
+        if name in self._params:
+            return self._params[name].value
+        raise KeyError(f"Parameter '{name}' not found.")
 
     def update(self, name: str, value: Any) -> None:
-        param = getattr(self, name, None)
-        if param is not None:
-            param.default_value = value
+        if name in self._params:
+            setattr(self, name, value)
         else:
-            raise KeyError(f"Parameter '{name}' not found.")
+            raise ValueError(f"Parameter '{name}' is not of type Param.")
+
+    @property
+    def all_params(self) -> Dict[str, Param]:
+        return self._params
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        # If attribute exists and is a Param, update its value.
+        if name in self.__dict__.get("_params", {}) and isinstance(self._params[name], Param):
+            self._params[name].value = value
+        else:
+            # Otherwise, automatically create a new Param with dtype derived from the value.
+            new_param = Param(name=name, dtype=type(value), default_value=value)
+            self._params[name] = new_param
+            super().__setattr__(name, new_param)
+
+    def __getattr__(self, name: str) -> Any:
+        if name in self.__dict__.get("_params", {}):
+            return self.__dict__["_params"][name].value
+        raise AttributeError(f"Parameter '{name}' not found.")
 
     def __repr__(self) -> str:
-        # Return only the user-added parameters (ignore private attributes)
-        params = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
-        return f"Parameters({params})"
+        return f"Parameters({self._params})"
 
+# ---------------------------
+# Node Configuration
+# ---------------------------
 
 class NodeConfig:
     """
     Base configuration for a node.
+    
     Contains:
-      - parameters: Dynamic and static parameters (as attributes).
+      - static_params: An instance of Parameters for parameters that affect the node’s structure.
+      - dynamic_params: An instance of Parameters for parameters that can be adjusted at runtime.
       - inputs: Expected input ports, mapping port name to (shape, dtype).
       - outputs: Expected output ports, mapping port name to (shape, dtype).
     """
-    def __init__(self):
-        self.parameters = Parameters()
+    def __init__(self) -> None:
+        self.static_params = Parameters()
+        self.dynamic_params = Parameters()
         self.inputs: Dict[str, Tuple[Tuple[int, ...], Any]] = {}
         self.outputs: Dict[str, Tuple[Tuple[int, ...], Any]] = {}
 
+    def initialize(self) -> None:
+        """
+        Initialize the node configuration.
+        """
+        raise NotImplementedError("initialize() must be implemented in derived NodeConfig classes.")
+    
     def update_io(self) -> None:
         """
         Update the input and output definitions based on the current static parameters.
-        This should be overridden in derived configuration classes.
+        Must be implemented in derived NodeConfig classes.
         """
         raise NotImplementedError("update_io() must be implemented in derived NodeConfig classes.")
+
