@@ -1,9 +1,0 @@
-{
-    "name": "Binance",
-    "version": "0.1",
-    "description": "Template for a plugin of type ExchangeInterface.",
-    "entry_point": "Binance.Binance:Binance",
-    "author": "",
-    "license": "MIT",
-    "dependencies": []
-}
