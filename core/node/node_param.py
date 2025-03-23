@@ -1,5 +1,7 @@
 from typing import Dict, Tuple, Any, List
 
+
+from core.node.node_base import Node
 # ---------------------------
 # Param and Parameters Classes
 # ---------------------------
@@ -90,7 +92,8 @@ class Parameters:
         params.limit = 150    # updates the value to 150
         params.new_param = 42 # automatically creates a new Param for 'new_param' with type int and value 42.
     """
-    def __init__(self) -> None:
+    def __init__(self, parent_node: Node) -> None:
+        self._node = parent_node
         # Internal dictionary to track Param objects.
         self.__dict__["_params"] = {}
 
@@ -130,37 +133,3 @@ class Parameters:
 
     def __repr__(self) -> str:
         return f"Parameters({self._params})"
-
-# ---------------------------
-# Node Configuration
-# ---------------------------
-
-class NodeConfig:
-    """
-    Base configuration for a node.
-    
-    Contains:
-      - static_params: An instance of Parameters for parameters that affect the node’s structure.
-      - dynamic_params: An instance of Parameters for parameters that can be adjusted at runtime.
-      - inputs: Expected input ports, mapping port name to (shape, dtype).
-      - outputs: Expected output ports, mapping port name to (shape, dtype).
-    """
-    def __init__(self) -> None:
-        self.static_params = Parameters()
-        self.dynamic_params = Parameters()
-        self.inputs: Dict[str, Tuple[Tuple[int, ...], Any]] = {}
-        self.outputs: Dict[str, Tuple[Tuple[int, ...], Any]] = {}
-
-    def initialize(self) -> None:
-        """
-        Initialize the node configuration.
-        """
-        raise NotImplementedError("initialize() must be implemented in derived NodeConfig classes.")
-    
-    def update_io(self) -> None:
-        """
-        Update the input and output definitions based on the current static parameters.
-        Must be implemented in derived NodeConfig classes.
-        """
-        raise NotImplementedError("update_io() must be implemented in derived NodeConfig classes.")
-

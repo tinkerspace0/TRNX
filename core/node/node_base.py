@@ -3,7 +3,8 @@ from abc import ABC, abstractmethod
 from typing import Dict, Tuple
 import numpy as np
 
-from core.node.node_config import NodeConfig
+from core.node.node_io import NodeIO
+from core.node.node_param import Parameters
 from core.memory.shared_memory_port import SharedMemoryPort
 from core.utils.identity import IDGenerator
 from core.debug.logger import gl_logger
@@ -16,49 +17,58 @@ class Node(ABC):
     def __init__(self, name: str = None):
         self.id = IDGenerator.generate_id(self)
         self.name = name if name else f"Node_{self.id}"
-        self.config = NodeConfig()  # Derived nodes should update this configuration.
-        self._inputs: Dict[str, SharedMemoryPort] = {}      # Actual shared memory ports for inputs.
-        self._outputs: Dict[str, SharedMemoryPort] = {}     # Actual shared memory ports for outputs.
+        self._static_params = Parameters(self)  # Static Parameters for the node.
+        self._dynamic_params = Parameters(self) # Dynamic Parameters for the node.
+        self._io_in = NodeIO(self, NodeIO.IOType.INPUT)     # Input/Output interface for the node inputs.
+        self._io_out = NodeIO(self, NodeIO.IOType.OUTPUT)   # Input/Output interface for the node outputs.
 
-    def set_input_port(self, port_name: str, shm_port: SharedMemoryPort) -> None:
-        if port_name in self.config.inputs:
-            self._inputs[port_name] = shm_port
-        else:
-            raise ValueError(f"Input port '{port_name}' is not defined in the node configuration.")
-
-    def set_output_port(self, port_name: str, shm_port: SharedMemoryPort) -> None:
-        if port_name in self.config.outputs:
-            self._outputs[port_name] = shm_port
-        else:
-            raise ValueError(f"Output port '{port_name}' is not defined in the node configuration.")
-
+    def get_static_params(self) :
+        """
+        Get the static/(runtime immutable) parameters of the node.
+        """
+        return self._static_params
+    
+    def get_dynamic_params(self) :
+        """
+        Get the dynamic/(runtime mutable) parameters of the node.
+        """
+        return self._dynamic_params
+    
+    def get_in_io(self) -> NodeIO:
+        """
+        Get the input/output interface for the node inputs.
+        """
+        return self._io_in
+    
+    def get_out_io(self) -> NodeIO:
+        """
+        Get the input/output interface for the node outputs.
+        """
+        return self._io_out
+    
+    def get_io(self) -> Tuple[NodeIO, NodeIO]:
+        """
+        Get the input/output interfaces for the node inputs and outputs.
+        """
+        return self._io_in, self._io_out
+    
     def verify(self) -> None:
         """
-        Verify that all required plugin inputs are set.
+        Verify the node configuration.
+        This includes checking the static and dynamic parameters, and the input/output definitions.
         """
-        # TODO - Check from config for the required pors
-        # TODO - Add a check for the shape of the data.
-        # TODO - Add a check for the dtype of the data.
-        if not all([port in self._inputs for port in self._required_inputs]):
-            raise ValueError("Not all required inputs set.")
+        # TODO - Check static and dynamic parameters for validity.
+        # TODO - Check the input and output NodeIO for validity.
+        pass
 
-    def _write_output(self, port_name: str, data):
+    @abstractmethod    
+    def update_io(self) -> None:
         """
-        Write data to an output port only if it is set.
-        Converts data to a NumPy array with the expected dtype.
+        Update the input and output definitions based on the current static parameters.
+        Must be implemented in derived NodeConfig classes.
         """
-        # TODO - Check if implementation is correct.
-        # TODO - Check if the data is of the correct shape.
-        # TODO - Check if the data is of the correct dtype.
-        # TODO - Check if the data is of the correct size.
-        if port_name in self._outputs and self._outputs[port_name] is not None:
-            if not isinstance(data, np.ndarray):
-                expected_dtype = self.config.outputs[port_name][1]
-                data = np.array(data, dtype=expected_dtype)
-            self._outputs[port_name].write(data)
-            gl_logger.info(f"Data written to output port '{port_name}'.")
-        else:
-            gl_logger.info(f"Output port '{port_name}' not set. Data not written.")
+        raise NotImplementedError("update_io() must be implemented in derived NodeConfig classes.")
+
 
     @abstractmethod
     def process(self) -> None:
