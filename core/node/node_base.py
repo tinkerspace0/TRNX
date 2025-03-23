@@ -2,6 +2,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Tuple
 import numpy as np
+from dataclasses import dataclass
 
 from core.node.node_io import NodeIO
 from core.node.node_param import Parameters
@@ -52,6 +53,14 @@ class Node(ABC):
         """
         return self._io_in, self._io_out
     
+    def get_config(self) -> 'NodeConfig':
+        """
+        Get the configuration of the node.
+        This includes static and dynamic parameters, and input/output
+        definitions.
+        """
+        return NodeConfig(self, self._static_params, self._dynamic_params, self._io_in, self._io_out)
+    
     def verify(self) -> None:
         """
         Verify the node configuration.
@@ -74,3 +83,13 @@ class Node(ABC):
     def process(self) -> None:
         """Execute the node's processing logic."""
         raise NotImplementedError("Process method not implemented.")
+    
+
+@dataclass
+class NodeConfig:
+    def __init__(self, node: Node, static_params: Parameters, dynamic_params: Parameters, input_ios: NodeIO, output_ios: NodeIO):
+        self.node: Node = node
+        self.static_params: Parameters = static_params
+        self.dynamic_params: Parameters = dynamic_params
+        self.input_ios: NodeIO = input_ios
+        self.output_ios: NodeIO = output_ios

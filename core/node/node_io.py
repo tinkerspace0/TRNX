@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import Dict, Tuple, Any
+from dataclasses import dataclass
 
 from core.memory import SharedMemoryPort
 from core.node.node_base import Node
@@ -172,3 +173,10 @@ class NodeIO:
 
     def __repr__(self) -> str:
         return f"{self._io_type.name.capitalize()}IO({list(self._ios.keys())})"
+
+@dataclass
+class IOConnection:
+    output_node: Node
+    output_port: str
+    input_node: Node
+    input_port: str
