@@ -8,7 +8,7 @@ from core.node.node_base import Node, NodeConfig
 from .trnx import TRNX
 
 
-class TRNXFactory:
+class TRNXEditor:
     """
     Node-based Factory for building TRNX trading bots.
     
