@@ -1,10 +1,13 @@
 from enum import Enum
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, TYPE_CHECKING
 from dataclasses import dataclass
 
 from core.memory import SharedMemoryPort
-from core.node.node_base import Node
 from core.debug.logger import gl_logger
+
+
+if TYPE_CHECKING:
+    from core.node.node_base import Node
 
 class IO:
     """
@@ -97,7 +100,7 @@ class NodeIO:
         INPUT = "input"
         OUTPUT = "output"
 
-    def __init__(self, parent_node: Node, io_type: "NodeIO.IOType") -> None:
+    def __init__(self, parent_node: "Node", io_type: "NodeIO.IOType") -> None:
         self._node = parent_node
         self._io_type = io_type
         # Internal dictionary to hold IO instances.
@@ -176,7 +179,7 @@ class NodeIO:
 
 @dataclass
 class IOConnection:
-    output_node: Node
+    output_node: "Node"
     output_port: str
-    input_node: Node
+    input_node: "Node"
     input_port: str

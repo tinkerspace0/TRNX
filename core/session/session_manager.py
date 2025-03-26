@@ -1,10 +1,8 @@
 from typing import Dict, Tuple
-from uuid import uuid4, UUID
+from uuid import UUID
 from enum import Enum
 
 from .session import Session, TRNXSession, FactorySession
-
-
 
 class SessionManager:
 
@@ -15,14 +13,13 @@ class SessionManager:
     def __init__(self):
         self._sessions: Dict[UUID, Session] = {}
 
-    def start_new_session(self, name: str, session_type: SessionType, *args, **kwargs) -> Tuple[UUID, Session]:
-        if session_type not in self.SessionType:
-            raise ValueError(f"Invalid session type: {session_type}")
-        if name in self.all_sessions:
+    def start_new_session(self, name: str, session_type: "SessionManager.SessionType", *args, **kwargs) -> Tuple[UUID, Session]:
+        # Check if a session with this name already exists.
+        if any(session.name == name for session in self._sessions.values()):
             raise ValueError(f"Session with name {name} already exists.")
 
         session_class = session_type.value
-        # Check if the session_class is indeed a subclass of Session.
+        # Check that session_class is a subclass of Session.
         if not issubclass(session_class, Session):
             raise ValueError("Provided session type does not subclass Session.")
         session = session_class(name, *args, **kwargs)
@@ -40,21 +37,8 @@ class SessionManager:
 
     @property
     def all_sessions(self):
-        return [session.name for session in self._sessions.values()]
-
-    # @property
-    # def active_sessions(self):
-    #     return [session.name for session in self._sessions.values() if session.status == Session.SessionStatus.RUNNING]
-    
-    # @property
-    # def paused_sessions(self):
-    #     return [session.name for session in self._sessions.values() if session.status == Session.SessionStatus.PAUSED]
-    
-    # @property
-    # def stopped_sessions(self):
-    #     return [session.name for session in self._sessions.values() if session.status == Session.SessionStatus.STOPPED]
-  
-    # @property
-    # def error_sessions(self):
-    #     return [session.name for session in self._sessions.values() if session.status == Session.SessionStatus.ERROR]
-  
+        # Return a list of dictionaries with session details.
+        return [
+            {"id": str(session.id), "name": session.name, "status": session.status.name}
+            for session in self._sessions.values()
+        ]

@@ -1,7 +1,8 @@
-from typing import Dict, Tuple, Any, List
+from typing import Dict, Tuple, Any, List, TYPE_CHECKING
 
 
-from core.node.node_base import Node
+if TYPE_CHECKING:
+    from core.node.node_base import Node
 # ---------------------------
 # Param and Parameters Classes
 # ---------------------------
@@ -92,7 +93,7 @@ class Parameters:
         params.limit = 150    # updates the value to 150
         params.new_param = 42 # automatically creates a new Param for 'new_param' with type int and value 42.
     """
-    def __init__(self, parent_node: Node) -> None:
+    def __init__(self, parent_node: "Node") -> None:
         self._node = parent_node
         # Internal dictionary to track Param objects.
         self.__dict__["_params"] = {}

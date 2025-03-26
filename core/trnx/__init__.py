@@ -1,1 +1,3 @@
-from .factory import Trenex
+
+from .trnx import TRNX
+from .factory import TRNXEditor
