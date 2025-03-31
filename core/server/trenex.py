@@ -1,4 +1,4 @@
-# trenex.py
+# core/server/trenex.py
 
 from enum import Enum
 from core.debug.logger import gl_logger
@@ -19,12 +19,15 @@ class TrenexServer:
 
     def __init__(self):
         self.name = "Trenex Backend"
-        self.session_manager = SessionManager()
+        self._ssm = SessionManager()
         self.status = self.TrenexStatus.INITIALIZED
 
     def mark_running(self):
         self.state = self.TrenexStatus.RUNNING
         gl_logger.info(f"{self.name} started. State: {self.state.name}")
+
+    def new_proj(self, proj_name:str):
+        self._ssm.start_new_session(name=proj_name, session_type=SessionManager.SessionType.FACTORY)
 
     def shutdown(self):
         for session in self.session_manager._sessions.values():

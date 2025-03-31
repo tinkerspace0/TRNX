@@ -15,47 +15,48 @@ class Session(ABC):
         """
         Generates and manages unique session IDs.
         """
-        _ids = set()  # Use a set to store used session IDs
+        _ids = {}  # Use a set to store used session IDs
 
         @classmethod
-        def generate(cls, session) -> str:
-            session_id = uuid4()
-            while session_id in cls._ids:
-                session_id = uuid4()
-            cls._ids.add(session_id)
-            return session_id
+        def generate(cls, sess) -> str:
+            sess_id = uuid4()
+            while sess_id in cls._ids:
+                sess_id = uuid4()
+            cls._ids[sess_id] = sess
+            return sess_id
 
     class SessionStatus(Enum):
         INITIALIZED = 0
-        RUNNING = 1
-        PAUSED = 2
-        TERMINATED = 3
-        STOPPED = 4
-        ERROR = 5
+        STARTING = 1
+        RUNNING = 2
+        PAUSED = 3
+        STOPPING = 4
+        TERMINATED = 5
+        ERROR = 6
 
-    def __init__(self, name: str, session_type: "SessionManager.SessionType" = None):
+    def __init__(self, name: str, sess_type: "SessionManager.SessionType" = None):
         self.id = Session.SessionID.generate(self)
         self.name = name
-        self.type = session_type  # This will store the enum value.
-        self.thread = None
-        self.status = self.SessionStatus.INITIALIZED
+        self.type = sess_type  # This will store the enum value.
+        self._thread = None
+        self.status = self.SessionStatus.TERMINATED
         self._shutdown = False
 
 class TRNXSession(Session):
     """
     Manages a TRNX runtime session.
     """
-    def __init__(self, name: str, trnx: TRNX = None):
+    def __init__(self, name: str):
         # Import locally to avoid circular dependencies.
         from core.session.session_manager import SessionManager
         super().__init__(name, session_type=SessionManager.SessionType.TRNX)
-        self.trnx = trnx  # This can be set later as needed.
+        self.trnx = None  # This can be set later as needed.
 
 class FactorySession(Session):
     """
     Manages a TRNX factory (configuration) session.
     """
-    def __init__(self, name: str, trnx_editor: TRNXEditor = None):
+    def __init__(self, name: str):
         from core.session.session_manager import SessionManager
         super().__init__(name, session_type=SessionManager.SessionType.FACTORY)
-        self.trnx_editor = trnx_editor  # This can be set later as needed.
+        self.trnx_editor = None  # This can be set later as needed.

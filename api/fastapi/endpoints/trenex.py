@@ -8,7 +8,7 @@ router = APIRouter()
 
 @router.get("/projects/")
 def list_projects(server: TrenexServer = Depends(get_trenex_server)):
-    sessions = server.session_manager.all_sessions
+    sessions = server._ssm.all_sessions
     # Filter for projects (factory sessions)
     projects = [s for s in sessions if s.get("type", "").lower() == "factory"]
     return {"projects": projects}

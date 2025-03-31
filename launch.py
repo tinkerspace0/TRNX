@@ -1,6 +1,6 @@
 # launch.py
 
-from config.settings import API_FRAMEWORK
+from config.settings import API_FRAMEWORK, RELOAD, LOG_LEVEL, HOST, PORT
 
 if __name__ == "__main__":
     if API_FRAMEWORK.lower() == "fastapi":
@@ -8,16 +8,16 @@ if __name__ == "__main__":
         import uvicorn
 
         uvicorn.run(
-            "api.fastapi_app:app",  # Import string path to your FastAPI app
-            host="0.0.0.0",         # Accessible on all network interfaces
-            port=8000,              # Or any other port you prefer
-            reload=True,            # Enable auto-reload (great for development)
-            log_level="info"
+            "api.fastapi.app:app",  # Import string path to your FastAPI app
+            host=HOST,              # Accessible on all network interfaces
+            port=PORT,              # port you prefer
+            reload=RELOAD,          # Enable auto-reload (great for development)
+            log_level=LOG_LEVEL
         )
     
     elif API_FRAMEWORK.lower() == "flask":
         # from api.flask.app import app
-        # app.run(host="0.0.0.0", port=8000, debug=True)
+        # app.run(host=HOST, port=PORT, debug=True)
         raise NotImplementedError("Flask API is not implemented as of now.")
     
     else:
