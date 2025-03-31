@@ -39,6 +39,11 @@ class SessionManager:
     def all_sessions(self):
         # Return a list of dictionaries with session details.
         return [
-            {"id": str(session.id), "name": session.name, "status": session.status.name}
+            {
+                "id": str(session.id), 
+                "name": session.name, 
+                "status": session.status.name.lower,
+                "type": session.type.name.lower() if session.typ is not None else "unknown"
+            }
             for session in self._sessions.values()
         ]
