@@ -34,7 +34,6 @@ def create_project(
     server: TrenexServer = Depends(get_trenex_server)
 ):
     try:
-        # Create a new project (factory session). new_proj should return (session_id, session)
         proj = server._ssm.start_new_project(payload.name)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -47,17 +46,17 @@ def create_project(
         "type": proj.type.name.lower() if proj.type is not None else "unknown"
         }
 
-@router.get("/nodes/available")
+@router.get("/nodes")
 def available_nodes():
     try:
         nodes = get_available_nodes()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    return {"available_nodes": nodes}
+    return nodes
 
 
 # Node operation Endpoints
-@router.post("/nodes/attach")
+@router.post("/node/attach")
 def attach_node(payload: NodeRequest, server: TrenexServer = Depends(get_trenex_server)):
     try:
         server._ssm.project._exec.attach_node(payload.type, payload.name)
@@ -65,7 +64,7 @@ def attach_node(payload: NodeRequest, server: TrenexServer = Depends(get_trenex_
         raise HTTPException(status_code=400, detail=str(e))
     return {"remark": f"Node '{payload.name}' attached successfully."}
 
-@router.post("/nodes/detach")
+@router.post("/node/detach")
 def detach_node(payload: NodeRequest, server: TrenexServer = Depends(get_trenex_server)):
     try:
         server._ssm.project._exec.detach_node(payload.name)
@@ -73,7 +72,7 @@ def detach_node(payload: NodeRequest, server: TrenexServer = Depends(get_trenex_
         raise HTTPException(status_code=400, detail=str(e))
     return {"remark": f"Node '{payload.name}' detached successfully."}
 
-@router.post("/nodes/connect")
+@router.post("/node/connect")
 def connect_node_io(payload: ConnectNodeIORequest, server: TrenexServer = Depends(get_trenex_server)):
     try:
         server._ssm.project._exec.connect_node_io(

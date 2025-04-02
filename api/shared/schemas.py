@@ -10,7 +10,7 @@ class NodeRequest(BaseModel):
     type: str
     name: str
 class ConnectNodeIORequest(BaseModel):
-    output_node_name: str
-    output_port: str
-    input_node_name: str
-    input_port: str
+    on_name: str
+    op_name: str
+    in_name: str
+    ip_name: str

@@ -57,7 +57,7 @@ class TRNXSession(Session):
     def __init__(self, name: str):
         # Import locally to avoid circular dependencies.
         from core.session.session_manager import SessionManager
-        super().__init__(name, session_type=SessionManager.SessionType.TRNX)
+        super().__init__(name, sess_type=SessionManager.SessionType.TRNX)
 
     def initialize(self):
         pass
@@ -70,7 +70,7 @@ class FactorySession(Session):
     """
     def __init__(self, name: str):
         from core.session.session_manager import SessionManager
-        super().__init__(name, session_type=SessionManager.SessionType.FACTORY)
+        super().__init__(name, sess_type=SessionManager.SessionType.FACTORY)
 
     def initialize(self):
         self._exec = TRNXEditor()
