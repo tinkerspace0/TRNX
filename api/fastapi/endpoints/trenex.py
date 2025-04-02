@@ -1,32 +1,93 @@
 # api/fastapi/endpoints/trenex.py
+
 from fastapi import APIRouter, Depends, HTTPException
+
 from api.shared.schemas import CreateProjectRequest
+from api.shared.schemas import NodeRequest, ConnectNodeIORequest
 from api.fastapi.dependencies import get_trenex_server
-from trenex import TrenexServer  # for type hints
+
+from core.server.trenex import TrenexServer  # for type hints
+from core.node.utils import get_available_nodes
 
 router = APIRouter()
 
-@router.get("/projects/")
-def list_projects(server: TrenexServer = Depends(get_trenex_server)):
-    sessions = server._ssm.all_sessions
-    # Filter for projects (factory sessions)
-    projects = [s for s in sessions if s.get("type", "").lower() == "factory"]
-    return {"projects": projects}
+# General project endpoints
+@router.get("/project/")
+def project(server: TrenexServer = Depends(get_trenex_server)):
+    # Get all sessions from the session manager and filter only factory sessions (projects)
+    proj = server._ssm.project
+    result = {}
+    if proj:
+        result = {
+            "id": str(proj.id),
+            "name": proj.name,
+            "status": proj.status.name.lower(),
+            "type": proj.type.name.lower() if proj.type is not None else "unknown"
+            }
+    return result
 
-@router.post("/projects/")
-def create_project(payload: CreateProjectRequest, server: TrenexServer = Depends(get_trenex_server)):
+# project/info
+
+@router.post("/project/")
+def create_project(
+    payload: CreateProjectRequest,
+    server: TrenexServer = Depends(get_trenex_server)
+):
     try:
-        session_type_enum = server.session_manager.SessionType.FACTORY
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid project type")
-    try:
-        session_id, session = server.session_manager.start_new_session(payload.name, session_type_enum)
+        # Create a new project (factory session). new_proj should return (session_id, session)
+        proj = server._ssm.start_new_project(payload.name)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
+    except Exception as e:
         raise HTTPException(status_code=500, detail="An unexpected error occurred")
     return {
-        "id": str(session_id),
-        "name": session.name,
-        "type": "trenex"
-    }
+        "id": str(proj.id),
+        "name": proj.name,
+        "status": proj.status.name.lower(),
+        "type": proj.type.name.lower() if proj.type is not None else "unknown"
+        }
+
+@router.get("/nodes/available")
+def available_nodes():
+    try:
+        nodes = get_available_nodes()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return {"available_nodes": nodes}
+
+
+# Node operation Endpoints
+@router.post("/nodes/attach")
+def attach_node(payload: NodeRequest, server: TrenexServer = Depends(get_trenex_server)):
+    try:
+        server._ssm.project._exec.attach_node(payload.type, payload.name)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"remark": f"Node '{payload.name}' attached successfully."}
+
+@router.post("/nodes/detach")
+def detach_node(payload: NodeRequest, server: TrenexServer = Depends(get_trenex_server)):
+    try:
+        server._ssm.project._exec.detach_node(payload.name)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"remark": f"Node '{payload.name}' detached successfully."}
+
+@router.post("/nodes/connect")
+def connect_node_io(payload: ConnectNodeIORequest, server: TrenexServer = Depends(get_trenex_server)):
+    try:
+        server._ssm.project._exec.connect_node_io(
+            payload.output_node_name, payload.output_port,
+            payload.input_node_name, payload.input_port
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"remark": "Nodes connected successfully."}
+
+@router.post("/project/build")
+def build_project(server: TrenexServer = Depends(get_trenex_server)):
+    try:
+        server._ssm.project._exec.build_trnx()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return {"remark": "TRNX project built successfully."}

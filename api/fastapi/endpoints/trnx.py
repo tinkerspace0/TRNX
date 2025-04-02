@@ -1,7 +1,7 @@
 # api/fastapi/endpoints/trnx.py
 from fastapi import APIRouter, Depends, HTTPException
 from api.fastapi.dependencies import get_trenex_server
-from trenex import TrenexServer
+from core.server import TrenexServer
 
 router = APIRouter()
 

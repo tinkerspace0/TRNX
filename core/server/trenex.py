@@ -1,6 +1,9 @@
 # core/server/trenex.py
 
 from enum import Enum
+from typing import Tuple
+from uuid import UUID
+
 from core.debug.logger import gl_logger
 from core.session import SessionManager
 
@@ -11,26 +14,33 @@ class TrenexServer:
     """
     class TrenexStatus(Enum):
         INITIALIZED = 0
-        RUNNING = 1
-        PAUSED = 2
-        TERMINATED = 3
-        STOPPED = 4
-        ERROR = 5
+        STARTING = 1
+        RUNNING = 2
+        PAUSED = 3
+        STOPPING = 4
+        TERMINATED = 5
+        ERROR = 6
 
     def __init__(self):
         self.name = "Trenex Backend"
-        self._ssm = SessionManager()
+        self._ssm: SessionManager = None
         self.status = self.TrenexStatus.INITIALIZED
 
-    def mark_running(self):
-        self.state = self.TrenexStatus.RUNNING
-        gl_logger.info(f"{self.name} started. State: {self.state.name}")
-
-    def new_proj(self, proj_name:str):
-        self._ssm.start_new_session(name=proj_name, session_type=SessionManager.SessionType.FACTORY)
+    def start(self):
+        self.status = self.TrenexStatus.STARTING
+        
+        self._ssm = SessionManager()
+        
+        self.status = self.TrenexStatus.RUNNING
+        gl_logger.info(f"TrenexServer started. State: {self.status}")
 
     def shutdown(self):
-        for session in self.session_manager._sessions.values():
-            session.shutdown()
-        self.state = self.TrenexState.STOPPED
+        self.status = self.TrenexStatus.STOPPING
+        proj = self._ssm._proj_sess
+        if proj:
+            proj.shutdown()
+        for sess in self._ssm._trnx_sess:
+            sess.shutdonw()
+        del self._ssm
+        self.status = self.TrenexStatus.TERMINATED
         gl_logger.info("Trenex server shutting down.")

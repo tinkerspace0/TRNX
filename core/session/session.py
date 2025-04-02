@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from threading import Thread
-from uuid import uuid4
+from uuid import uuid4, UUID
 from typing import TYPE_CHECKING
 
 from core.trnx import TRNX
@@ -35,7 +35,7 @@ class Session(ABC):
         ERROR = 6
 
     def __init__(self, name: str, sess_type: "SessionManager.SessionType" = None):
-        self.id = Session.SessionID.generate(self)
+        self.id: UUID = Session.SessionID.generate(self)
         self.name = name
         self.type = sess_type  # This will store the enum value.
         self._thread = None
