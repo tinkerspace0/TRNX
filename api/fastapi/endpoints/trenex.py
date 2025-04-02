@@ -46,8 +46,8 @@ def create_project(
         "type": proj.type.name.lower() if proj.type is not None else "unknown"
         }
 
-@router.get("/nodes")
-def available_nodes():
+@router.get("/nodes/")
+def available_nodes():    
     try:
         nodes = get_available_nodes()
     except Exception as e:
