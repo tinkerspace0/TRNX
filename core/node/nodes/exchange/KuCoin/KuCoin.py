@@ -18,8 +18,8 @@ class KuCoin(Node):
         self.update_io()
 
     def update_io(self):
-        # l = self._static_params.limit.value
-        # self._io_out.create_io("ohlcv", type(1.1), shape=(6, l))
+        l = self._static_params.limit.value
+        self._io_out.create_io("ohlcv", type(1.1), shape=(6, l))
         pass
     def process(self):
         pass

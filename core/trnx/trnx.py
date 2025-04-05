@@ -23,12 +23,12 @@ class TRNX:
             raise ValueError("TRNX is not built. Please build the TRNX first.")
         if self._is_running:
             raise RuntimeError("TRNX is already running. Stop it before running again.")
-        if self._graph is None:
+        if self._exec_graph is None:
             raise ValueError("DAG not configured. TRNXFactory must build the DAG.")
 
         self._is_running = True
         # Create a copy of the DAG for execution
-        graph_copy = self._graph.copy()
+        graph_copy = self._exec_graph.copy()
 
         # Execute nodes level-by-level (all nodes with no incoming edges run concurrently)
         while graph_copy.nodes:
@@ -51,13 +51,13 @@ class TRNX:
             raise ValueError("TRNX is not built. Please build the TRNX first.")
         if self._is_running:
             raise RuntimeError("TRNX is already running. Stop it before running again.")
-        if self._graph is None:
+        if self._exec_graph is None:
             raise ValueError("DAG not configured. TRNXFactory must build the DAG.")
 
         self._is_running = True
         # Continuous run: repeatedly execute one iteration of the DAG.
         while not self._stop:
-            graph_copy = self._graph.copy()
+            graph_copy = self._exec_graph.copy()
             while graph_copy.nodes:
                 ready_nodes = [node for node in graph_copy.nodes if graph_copy.in_degree(node) == 0]
                 threads = []
