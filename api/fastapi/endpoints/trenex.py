@@ -7,7 +7,6 @@ from api.shared.schemas import NodeRequest, ConnectNodeIORequest
 from api.fastapi.dependencies import get_trenex_server
 
 from core.server.trenex import TrenexServer  # for type hints
-from core.node.utils import get_available_nodes
 
 router = APIRouter()
 
@@ -47,24 +46,32 @@ def create_project(
         }
 
 @router.get("/nodes/")
-def available_nodes():    
+def available_nodes(server: TrenexServer = Depends(get_trenex_server)):    
     try:
-        nodes = get_available_nodes()
+        nodes = server._nm.available_nodes()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return nodes
 
 
 # Node operation Endpoints
-@router.post("/node/attach")
+@router.post("/node/attach/")
 def attach_node(payload: NodeRequest, server: TrenexServer = Depends(get_trenex_server)):
     try:
-        server._ssm.project._exec.attach_node(payload.type, payload.name)
+        proj = server._ssm.project
+        if proj is None:
+            return {"remark": f"Project not initialized."}
+        if proj._exec is None:
+            return {"remark": f"Editor not initialized."}
+        node = server._nm.create_node_instance(category=payload.type, node_class_name=payload.name)
+        print("After server check")
+        proj._exec.attach_node(node)
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"remark": f"Node '{payload.name}' attached successfully."}
 
-@router.post("/node/detach")
+@router.post("/node/detach/")
 def detach_node(payload: NodeRequest, server: TrenexServer = Depends(get_trenex_server)):
     try:
         server._ssm.project._exec.detach_node(payload.name)
@@ -72,7 +79,7 @@ def detach_node(payload: NodeRequest, server: TrenexServer = Depends(get_trenex_
         raise HTTPException(status_code=400, detail=str(e))
     return {"remark": f"Node '{payload.name}' detached successfully."}
 
-@router.post("/node/connect")
+@router.post("/node/connect/")
 def connect_node_io(payload: ConnectNodeIORequest, server: TrenexServer = Depends(get_trenex_server)):
     try:
         server._ssm.project._exec.connect_node_io(
@@ -83,7 +90,7 @@ def connect_node_io(payload: ConnectNodeIORequest, server: TrenexServer = Depend
         raise HTTPException(status_code=400, detail=str(e))
     return {"remark": "Nodes connected successfully."}
 
-@router.post("/project/build")
+@router.post("/project/build/")
 def build_project(server: TrenexServer = Depends(get_trenex_server)):
     try:
         server._ssm.project._exec.build_trnx()

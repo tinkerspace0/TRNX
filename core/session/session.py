@@ -71,7 +71,8 @@ class FactorySession(Session):
     def __init__(self, name: str):
         from core.session.session_manager import SessionManager
         super().__init__(name, sess_type=SessionManager.SessionType.FACTORY)
+        self.initialize()
 
     def initialize(self):
-        self._exec = TRNXEditor()
+        self._exec = TRNXEditor(self.name)
         self.status = Session.SessionStatus.INITIALIZED

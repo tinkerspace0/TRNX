@@ -6,7 +6,7 @@ from uuid import UUID
 
 from core.debug.logger import gl_logger
 from core.session import SessionManager
-
+from core.node.manager import NodeManager
 class TrenexServer:
     """
     TrenexServer is the central backend application.
@@ -24,6 +24,7 @@ class TrenexServer:
     def __init__(self):
         self.name = "Trenex Backend"
         self._ssm: SessionManager = None
+        self._nm = NodeManager()
         self.status = self.TrenexStatus.INITIALIZED
 
     def start(self):

@@ -7,8 +7,8 @@ class CreateProjectRequest(BaseModel):
 
 # Pydantic models for node operations
 class NodeRequest(BaseModel):
-    type: str
     name: str
+    type: str
 class ConnectNodeIORequest(BaseModel):
     on_name: str
     op_name: str

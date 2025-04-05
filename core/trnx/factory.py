@@ -2,7 +2,6 @@ import networkx as nx
 from typing import List, Dict
 
 from core.debug.logger import gl_logger
-from core.node.utils import get_available_nodes, create_node_instance
 from core.node.node_io import IOConnection
 from core.node.node_base import Node, NodeConfig
 from .trnx import TRNX
@@ -16,21 +15,25 @@ class TRNXEditor:
     - Once TRNX is built and running, nodes cannot be modified.
     - Users can modify an existing TRNX object only when it is stopped.
     """
-    def __init__(self):
+    def __init__(self, name:str):
+        self.name = name
         self._trnx: TRNX = None  # The TRNX instance
         self._node_configs: Dict[str, NodeConfig] = {}  # Dict of node configurations
         self._saved_trnx: bool = False  # Saved TRNX instance for later use
         self._node_io_connections: List[IOConnection] = []  # List of IO connections between nodes
-
-    def start_new_trnx(self, name: str):
+        self._init = False
+        self.init_new_trnx(self.name)
+    
+    def init_new_trnx(self, name: str):
         """Start a new TRNX instance with the given name if none exists."""
         if self._trnx is not None and not self._saved_trnx:
             raise Warning("TRNX instance is not saved. Save it or discard it before starting a new one.")
-        self.discard_trnx()  # Discard any existing TRNX instance
+        if self._init:
+            self.discard_trnx()  # Discard any existing TRNX instance
         self._trnx = TRNX(name)
         self._node_configs = {}
         gl_logger.info(f"Started new TRNX: {name}")
-
+ 
     def discard_trnx(self):
         """Discard the current TRNX instance."""
         self._node_io_connections = []
@@ -39,23 +42,22 @@ class TRNXEditor:
         self._saved_trnx = False
         gl_logger.info("Discarded TRNX instance.")
 
-    def attach_node(self, node_type: str, node_name: str):
+    def reset_trnx(self):
+        self.discard_trnx()
+        self.init_new_trnx(self.name)
+
+    def attach_node(self, node: Node):
         """Add an available node to the TRNX instance."""
+        if self._trnx is None:
+            raise AttributeError("TRNX not initialized")
         if self._trnx._is_running:
             raise RuntimeError("Cannot modify TRNX while running.")
         
-        for _, nodes in get_available_nodes().items():
-            if node_name in nodes:
-                break
-        else:
-            raise ValueError(f"Node {node_name} not found in available nodes.")
-        
-        node_instance = create_node_instance(node_type, node_name)
-        self._trnx._nodes.append(node_instance)
+        self._trnx._nodes.append(node)
         self._trnx._is_built = False  # Requires rebuild after changes
-        self._node_configs[node_instance.name] = node_instance.get_config()
+        self._node_configs[node.name] = node.get_config()
 
-        gl_logger.info(f"Added node {node_name} to TRNX {self._trnx.name}")
+        gl_logger.info(f"Added node {node.name} to TRNX {self._trnx.name}")
 
     def detach_node(self, node_name: str):
         """Remove a node from the TRNX instance."""
