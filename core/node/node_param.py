@@ -3,6 +3,7 @@ from typing import Dict, Tuple, Any, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from core.node.node_base import Node
+
 # ---------------------------
 # Param and Parameters Classes
 # ---------------------------
@@ -31,6 +32,8 @@ class Param:
         # Use our __setattr__ to set the value (which validates)
         self.value = default_value
 
+        print(self.value, self.dtype)
+
     def set_allowed_range(self, new_range: Tuple[Any, Any]) -> None:
         """Update the allowed range for this parameter."""
         self.allowed_range = new_range
@@ -42,7 +45,8 @@ class Param:
     def __setattr__(self, key: str, value: Any) -> None:
         if key == "value":
             if not isinstance(value, self.dtype):
-                raise ValueError(f"Value for '{self.name}' must be of type {self.dtype.__name__}, got {type(value).__name__}.")
+                print(self.value)
+                raise ValueError(f"Value for '{self.name}' must be of type {self.dtype}, got {type(value).__name__}.")
             if self.allowed_range is not None:
                 min_val, max_val = self.allowed_range
                 if not (min_val <= value <= max_val):
@@ -94,7 +98,7 @@ class Parameters:
         params.new_param = 42 # automatically creates a new Param for 'new_param' with type int and value 42.
     """
     def __init__(self, parent_node: "Node") -> None:
-        self._node = parent_node
+        self.__dict__["_node"] = parent_node
         # Internal dictionary to track Param objects.
         self.__dict__["_params"] = {}
 
@@ -116,16 +120,26 @@ class Parameters:
     @property
     def all_params(self) -> Dict[str, Param]:
         return self._params
+    
+    @property
+    def parent(self) -> "Node":
+        parent = self.__dict__.get("_node", None)
+        return parent
 
     def __setattr__(self, name: str, value: Any) -> None:
-        # If attribute exists and is a Param, update its value.
-        if name in self.__dict__.get("_params", {}) and isinstance(self._params[name], Param):
-            self._params[name].value = value
+        if name in {"_node", "_params"}:
+            raise AttributeError("Cannot define parameter named _node or _params")
+
+        if isinstance(value, Param):
+            self._params[name] = value
+            super().__setattr__(name, value)
         else:
-            # Otherwise, automatically create a new Param with dtype derived from the value.
-            new_param = Param(name=name, dtype=type(value), default_value=value)
-            self._params[name] = new_param
-            super().__setattr__(name, new_param)
+            if name in self.__dict__.get("_params", {}) and isinstance(self._params[name], Param):
+                self._params[name].value = value
+            else:
+                new_param = Param(name=name, dtype=type(value), default_value=value)
+                self._params[name] = new_param
+                super().__setattr__(name, new_param)
 
     def __getattr__(self, name: str) -> Any:
         if name in self.__dict__.get("_params", {}):
