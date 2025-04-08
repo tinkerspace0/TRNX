@@ -32,8 +32,6 @@ class Param:
         # Use our __setattr__ to set the value (which validates)
         self.value = default_value
 
-        print(self.value, self.dtype)
-
     def set_allowed_range(self, new_range: Tuple[Any, Any]) -> None:
         """Update the allowed range for this parameter."""
         self.allowed_range = new_range
@@ -45,7 +43,6 @@ class Param:
     def __setattr__(self, key: str, value: Any) -> None:
         if key == "value":
             if not isinstance(value, self.dtype):
-                print(self.value)
                 raise ValueError(f"Value for '{self.name}' must be of type {self.dtype}, got {type(value).__name__}.")
             if self.allowed_range is not None:
                 min_val, max_val = self.allowed_range

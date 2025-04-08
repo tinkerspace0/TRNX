@@ -12,7 +12,7 @@ class TRNX:
     def __init__(self, name: str):
         self.name = name
         self._nodes: List[Node] = []       # List of node instances.
-        self._exec_graph = None                 # DAG representing node dependencies.
+        self._exec_graph = None            # DAG representing node dependencies.
         self._is_built = False
         self._is_running = False
         self._stop = False                 # Flag for stopping continuous run.

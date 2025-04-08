@@ -42,7 +42,7 @@ class Session(ABC):
         self.status = self.SessionStatus.TERMINATED
         self._shutdown = False
 
-        self._exec = None
+        self.worker = None
 
     @abstractmethod
     def initialize(self):
@@ -59,6 +59,38 @@ class TRNXSession(Session):
         from core.session.session_manager import SessionManager
         super().__init__(name, sess_type=SessionManager.SessionType.TRNX)
 
+    def load_trnx(self, trnx: TRNX):
+        if isinstance(trnx, TRNX):
+            self.worker = trnx
+        else:
+            raise TypeError("Provided input is not a TRNX object")
+
+    def start(self):
+        if self.worker is None:
+            raise ValueError("TRNXSession has no TRNX worker instance attached.")
+
+        self.status = self.SessionStatus.STARTING
+        if self._thread is None or not self._thread.is_alive():
+            self.worker._stop = False
+            self._thread = Thread(target=self.worker.run, daemon=True)
+            self._thread.start()
+            self.status = self.SessionStatus.RUNNING
+
+    def stop(self):
+        """
+        Stop the TRNX instance by setting its _stop flag to True.
+        Optionally, join the thread if a synchronous shutdown is required.
+        """
+        self.status = self.SessionStatus.STOPPING
+        if self._thread is not None and self._thread.is_alive():
+            self.worker._stop = True
+            self.status = self.SessionStatus.TERMINATED
+            # Optionally, wait for the thread to finish:
+            self._thread.join(timeout=5)  # waits up to 5 seconds
+            print(f"TRNXSession '{self.name}' has been stopped.")
+        else:
+            print(f"TRNXSession '{self.name}' is not running.")
+
     def initialize(self):
         pass
         # self._exec = TRNX.load()
@@ -74,5 +106,5 @@ class FactorySession(Session):
         self.initialize()
 
     def initialize(self):
-        self._exec = TRNXEditor(self.name)
+        self.worker = TRNXEditor(self.name)
         self.status = Session.SessionStatus.INITIALIZED
