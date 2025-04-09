@@ -1,8 +1,9 @@
 from enum import Enum
-from typing import Dict, Tuple, Any, TYPE_CHECKING
+from typing import Dict, Tuple, Any, TYPE_CHECKING, List, Union
 from dataclasses import dataclass
 
 from core.memory import SharedMemoryPort
+from core.utils.identity import IDGenerator
 from core.debug.logger import gl_logger
 
 
@@ -19,12 +20,70 @@ class IO:
         shape (tuple): The shape of the data for this IO.
         shm (SharedMemoryPort): The associated shared memory port (if initialized).
     """
-    def __init__(self, name: str, dtype: type = float, shape: Tuple[int, ...] = None) -> None:
+
+    class IOType(Enum):
+        INPUT = 1
+        OUTPUT = 2
+
+    def __init__(self, name: str, io_type: IOType, parent: "NodeIO", dtype: type = float, shape: Tuple[int, ...] = None) -> None:
+        self.id = IDGenerator.generate_id(self)
         self.name: str = name
         self.dtype: type = dtype
         self.shape: Tuple[int, ...] = shape
         self.shm: SharedMemoryPort = None
+        self.parent: NodeIO = parent
+        self._io_type: IO.IOType = io_type
+        # For input, store a single connection (or None). For output, use a list to hold connections.
+        self._io_cntn: Union[None, IO, List[IO]] = None if self._io_type == IO.IOType.INPUT else []
         gl_logger.debug(f"Initialized IO: {self}")
+
+    def connect(self, other: 'IO') -> None:
+        """
+        Connect this IO to another IO. Input ports may only be connected
+        to one output port, while output ports can connect to multiple input ports.
+        """
+        if self._io_type == other._io_type:
+            raise ValueError(f"Cannot connect two IOs of the same type: {self._io_type.name}")
+
+        # Identify which is input and which is output
+        if self._io_type == IO.IOType.INPUT:
+            input_io = self
+            output_io = other
+        else:
+            input_io = other
+            output_io = self
+
+        # Ensure the input IO is not already connected.
+        if input_io._io_cntn is not None:
+            raise ValueError("This input port is already connected to another output port.")
+
+        # Establish the connection in both directions.
+        input_io._io_cntn = output_io
+        if input_io not in output_io._io_cntn:
+            output_io._io_cntn.append(input_io)
+        gl_logger.debug(f"Connected output '{output_io.name}' to input '{input_io.name}'")
+
+    def disconnect(self, other: 'IO') -> None:
+        """
+        Disconnect this IO from another IO.
+        """
+        # If self is an input, then its connection must be 'other'
+        if self._io_type == IO.IOType.INPUT:
+            if self._io_cntn != other:
+                raise ValueError("No such connection exists to disconnect.")
+            # Remove the input from the output's connection list.
+            if isinstance(other._io_cntn, list) and self in other._io_cntn:
+                other._io_cntn.remove(self)
+            self._io_cntn = None
+        else:
+            # self is an output (thus _io_cntn is a list)
+            if not isinstance(self._io_cntn, list) or other not in self._io_cntn:
+                raise ValueError("No such connection exists to disconnect.")
+            self._io_cntn.remove(other)
+            # Also remove the output from the input’s connection if it points back.
+            if other._io_cntn == self:
+                other._io_cntn = None
+        gl_logger.debug(f"Disconnected '{self.name}' from '{other.name}'")
 
     def set_shm(self, shm: SharedMemoryPort) -> None:
         """
@@ -96,11 +155,7 @@ class NodeIO:
         _ios (Dict[str, IO]): Dictionary mapping IO names to IO instances.
     """
 
-    class IOType(Enum):
-        INPUT = "input"
-        OUTPUT = "output"
-
-    def __init__(self, parent_node: "Node", io_type: "NodeIO.IOType") -> None:
+    def __init__(self, parent_node: "Node", io_type: "IO.IOType") -> None:
         self._node = parent_node
         self._io_type = io_type
         # Internal dictionary to hold IO instances.
@@ -122,7 +177,7 @@ class NodeIO:
         if name in self._ios:
             gl_logger.error(f"IO with name '{name}' already exists.")
             raise ValueError(f"IO with name '{name}' already exists.")
-        io = IO(name=name, dtype=dtype, shape=shape)
+        io = IO(name=name, io_type=self._io_type, dtype=dtype, shape=shape)
         self._ios[name] = io
         super().__setattr__(name, io)
         gl_logger.info(f"Created IO '{name}' with dtype {dtype.__name__} and shape {shape}.")
@@ -179,7 +234,5 @@ class NodeIO:
 
 @dataclass
 class IOConnection:
-    output_node: "Node"
-    output_port: str
-    input_node: "Node"
-    input_port: str
+    out_IO: "IO"
+    in_IO: "IO"

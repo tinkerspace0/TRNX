@@ -2,7 +2,7 @@ import networkx as nx
 from typing import List, Dict
 
 from core.debug.logger import gl_logger
-from core.node.node_io import IOConnection
+from core.node.node_io import IOConnection, IO
 from core.node.node_base import Node, NodeConfig
 from .trnx import TRNX
 
@@ -15,12 +15,12 @@ class TRNXEditor:
     - Once TRNX is built and running, nodes cannot be modified.
     - Users can modify an existing TRNX object only when it is stopped.
     """
-    def __init__(self, name:str):
+    def __init__(self, name: str):
         self.name = name
         self._trnx: TRNX = None  # The TRNX instance
-        self._node_configs: Dict[str, NodeConfig] = {}  # Dict of node configurations
-        self._saved_trnx: bool = False  # Saved TRNX instance for later use
-        self._node_io_connections: List[IOConnection] = []  # List of IO connections between nodes
+        self._node_configs: Dict[str, NodeConfig] = {}  # Dict of node configurations keyed by node name
+        self._saved_trnx: bool = False  # Indicates if the TRNX instance has been saved for later use
+        self._node_io_connections: List[IOConnection] = []  # List of IOConnection records between nodes
         self._init = False
         self.init_new_trnx(self.name)
     
@@ -32,6 +32,7 @@ class TRNXEditor:
             self.discard_trnx()  # Discard any existing TRNX instance
         self._trnx = TRNX(name)
         self._node_configs = {}
+        self._node_io_connections = []
         gl_logger.info(f"Started new TRNX: {name}")
  
     def discard_trnx(self):
@@ -43,6 +44,7 @@ class TRNXEditor:
         gl_logger.info("Discarded TRNX instance.")
 
     def reset_trnx(self):
+        """Reset TRNX by discarding the current instance and starting a new one."""
         self.discard_trnx()
         self.init_new_trnx(self.name)
 
@@ -71,63 +73,54 @@ class TRNXEditor:
         self._trnx._nodes.remove(node)
         self._node_configs.pop(node_name, None)
         
-        # Remove any IO connections related to this node.
+        # Remove any IO connections related to the node. Use the node name extracted from each IO’s parent NodeIO.
         self._node_io_connections = [
             conn for conn in self._node_io_connections 
-            if conn.output_node.name != node_name and conn.input_node.name != node_name
+            if conn.out_IO.parent._node.name != node_name and conn.in_IO.parent._node.name != node_name
         ]
 
         gl_logger.info(f"Removed node {node_name} from TRNX {self._trnx.name}")
         self._trnx._is_built = False  # Requires rebuild after changes
 
-    def connect_node_io(self, output_node_name: str, output_port: str, input_node_name: str, input_port: str):
+    def connect_node_io(self, out_io: IO, in_io: IO):
         """
-        Define an input-output connection between two nodes using their names.
+        Connect an output IO to an input IO.
         
-        This method looks up the node instances, validates that the ports exist,
-        creates an IOConnection record, and stores it.
+        This method validates that the provided IOs belong to nodes registered in the TRNX instance,
+        ensures they are of the correct types (OUTPUT for out_io and INPUT for in_io), invokes the IO's 
+        own connect method for mutual connection, and then creates an IOConnection record.
         """
         if self._trnx._is_running:
             raise RuntimeError("Cannot modify TRNX connections while running.")
 
-        if output_node_name not in self._node_configs:
-            raise ValueError(f"Output node {output_node_name} not found in TRNX.")
-        if input_node_name not in self._node_configs:
-            raise ValueError(f"Input node {input_node_name} not found in TRNX.")
+        # Retrieve node names from each IO's parent NodeIO.
+        out_node_name = out_io.parent._node.name
+        in_node_name = in_io.parent._node.name
 
-        # Get the NodeIO interfaces from the node configuration.
-        output_ios = self._node_configs[output_node_name].output_ios
-        input_ios = self._node_configs[input_node_name].input_ios
+        if out_node_name not in self._node_configs:
+            raise ValueError(f"Output node {out_node_name} not found in TRNX.")
+        if in_node_name not in self._node_configs:
+            raise ValueError(f"Input node {in_node_name} not found in TRNX.")
 
-        # Validate that the specified ports exist.
-        try:
-            output_ios.get(output_port)
-        except KeyError:
-            raise ValueError(f"Output port '{output_port}' not found in node '{output_node_name}'.")
-        try:
-            input_ios.get(input_port)
-        except KeyError:
-            raise ValueError(f"Input port '{input_port}' not found in node '{input_node_name}'.")
+        # Validate port types.
+        if out_io._io_type != IO.IOType.OUTPUT:
+            raise ValueError(f"The provided port '{out_io.name}' is not an OUTPUT port.")
+        if in_io._io_type != IO.IOType.INPUT:
+            raise ValueError(f"The provided port '{in_io.name}' is not an INPUT port.")
 
-        # Resolve the actual node instances from the node configuration.
-        output_node = self._node_configs[output_node_name].node
-        input_node = self._node_configs[input_node_name].node
+        # Establish the connection using the IO's connect method.
+        out_io.connect(in_io)
 
-        # Create the connection record.
-        connection = IOConnection(
-            output_node=output_node,
-            output_port=output_port,
-            input_node=input_node,
-            input_port=input_port
-        )
+        # Create and record the connection.
+        connection = IOConnection(out_IO=out_io, in_IO=in_io)
         self._node_io_connections.append(connection)
-        gl_logger.info(f"Defined connection: {output_node_name}:{output_port} -> {input_node_name}:{input_port}")
+        gl_logger.info(f"Defined connection: {out_node_name}:{out_io.name} -> {in_node_name}:{in_io.name}")
 
     def build_trnx(self):
         """
         Finalizes the TRNX configuration:
-          - Creates shared memory ports for defined connections (if applicable).
-          - Builds the DAG representing execution order based on node connections.
+          - (Optional) Creates shared memory ports for defined connections.
+          - Builds a Directed Acyclic Graph (DAG) representing execution order based on node connections.
           - Locks further modifications.
         """
         if self._trnx._is_running:
@@ -136,26 +129,28 @@ class TRNXEditor:
         # (Optional) Create shared memory ports for connections here.
         # TODO: Implement shared memory port creation logic if needed.
 
-        # Verify that all nodes are set up correctly.
+        # Verify that all nodes are correctly set up.
         for node in self._trnx._nodes:
             node.verify()
 
-        # Build the DAG for execution order.
+        # Build the DAG for execution ordering.
         dag = nx.DiGraph()
 
         # Add all nodes to the graph.
         for node in self._trnx._nodes:
             dag.add_node(node)
 
-        # Add edges based on defined node connections.
+        # Add edges according to the defined IO connections.
         for connection in self._node_io_connections:
-            dag.add_edge(connection.output_node, connection.input_node)
+            out_node = connection.out_IO.parent._node
+            in_node = connection.in_IO.parent._node
+            dag.add_edge(out_node, in_node)
 
-        # Validate that the DAG is acyclic.
+        # Validate that the resulting graph is acyclic.
         if not nx.is_directed_acyclic_graph(dag):
             raise ValueError("The node dependency graph has cycles! Ensure dependencies are acyclic.")
 
-        # Assign the DAG to the TRNX instance.
+        # Assign the execution graph to the TRNX instance.
         self._trnx._exec_graph = dag
 
         self._trnx._is_built = True
