@@ -4,7 +4,7 @@ from typing import Dict, Tuple
 import numpy as np
 from dataclasses import dataclass
 
-from core.node.node_io import NodeIO
+from core.node.node_io import NodeIO, IO
 from core.node.node_param import Parameters
 from core.memory.shared_memory_port import SharedMemoryPort
 from core.utils.identity import IDGenerator
@@ -20,8 +20,8 @@ class Node(ABC):
         self.name = name if name else f"Node_{self.id}"
         self._static_params = Parameters(self)  # Static Parameters for the node.
         self._dynamic_params = Parameters(self) # Dynamic Parameters for the node.
-        self._io_in = NodeIO(self, NodeIO.IOType.INPUT)     # Input/Output interface for the node inputs.
-        self._io_out = NodeIO(self, NodeIO.IOType.OUTPUT)   # Input/Output interface for the node outputs.
+        self._io_in = NodeIO(self, IO.IOType.INPUT)     # Input/Output interface for the node inputs.
+        self._io_out = NodeIO(self, IO.IOType.OUTPUT)   # Input/Output interface for the node outputs.
 
     def get_static_params(self) :
         """
