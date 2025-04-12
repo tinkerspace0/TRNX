@@ -177,7 +177,7 @@ class NodeIO:
         if name in self._ios:
             gl_logger.error(f"IO with name '{name}' already exists.")
             raise ValueError(f"IO with name '{name}' already exists.")
-        io = IO(name=name, io_type=self._io_type, dtype=dtype, shape=shape)
+        io = IO(name=name, io_type=self._io_type, parent=self, dtype=dtype, shape=shape)
         self._ios[name] = io
         super().__setattr__(name, io)
         gl_logger.info(f"Created IO '{name}' with dtype {dtype.__name__} and shape {shape}.")
