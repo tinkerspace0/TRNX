@@ -1,84 +1,78 @@
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List, Optional
 from uuid import UUID
 from enum import Enum
 
-from .session import Session, TRNXSession, FactorySession
+from .session import Session, TRNXSession, CanvasSession
+
 
 class SessionManager:
 
     class SessionType(Enum):
         TRNX = TRNXSession
-        FACTORY = FactorySession
+        CANVAS = CanvasSession
 
     def __init__(self):
-        # Only one factory session (project) is allowed.
-        self._proj_sess: FactorySession = None
-        # Multiple TRNX sessions (runtime) can be created.
+        # Storage for multiple sessions of each type
+        self._canvas_sess: Dict[UUID, CanvasSession] = {}
         self._trnx_sess: Dict[UUID, TRNXSession] = {}
 
+    # ----------------------
+    # Canvas (Editor) Sessions
+    # ----------------------
 
-    # Create a new project (factory session)
-    def start_new_project(self, name: str, *args, **kwargs) -> FactorySession:
-        if self._proj_sess is not None:
-            raise ValueError(f"A project already exists with name '{self._proj_sess.name}'.")
-        # Create a FactorySession
-        session = FactorySession(name, *args, **kwargs)
-        self._proj_sess = session
-        return session
+    def start_new_canvas_session(self, name: str, *args, **kwargs) -> Tuple[UUID, CanvasSession]:
+        if any(sess.name == name for sess in self._canvas_sess.values()):
+            raise ValueError(f"Canvas session '{name}' already exists.")
+        session = CanvasSession(name, *args, **kwargs)
+        self._canvas_sess[session.id] = session
+        return session.id, session
 
-    # Create a new TRNX session (runtime)
+    # ----------------------
+    # TRNX (Runtime) Sessions
+    # ----------------------
+
     def start_new_trnx_session(self, name: str, *args, **kwargs) -> Tuple[UUID, TRNXSession]:
-        if any(session.name == name for session in self._trnx_sess.values()):
-            raise ValueError(f"Session with name {name} already exists.")
+        if any(sess.name == name for sess in self._trnx_sess.values()):
+            raise ValueError(f"TRNX session '{name}' already exists.")
         session = TRNXSession(name, *args, **kwargs)
         self._trnx_sess[session.id] = session
-        return (session.id, session)
+        return session.id, session
 
+    # ----------------------
+    # Session Retrieval
+    # ----------------------
 
-    # Retrieve session by ID: if sess_type provided, look in that storage; otherwise, search both.
-    def retrieve_session_by_id(self, sess_id: UUID, sess_type: "SessionManager.SessionType" = None) -> Session:
-        if sess_type:
-            if sess_type == self.SessionType.FACTORY:
-                return self._proj_sess if self._proj_sess and self._proj_sess.id == sess_id else None
-            elif sess_type == self.SessionType.TRNX:
-                return self._trnx_sess.get(sess_id)
-        else:
-            # Check factory session first
-            if self._proj_sess and self._proj_sess.id == sess_id:
-                return self._proj_sess
+    def retrieve_session_by_id(self, sess_id: UUID, sess_type: "SessionManager.SessionType" = None) -> Optional[Session]:
+        if sess_type == self.SessionType.CANVAS:
+            return self._canvas_sess.get(sess_id)
+        elif sess_type == self.SessionType.TRNX:
             return self._trnx_sess.get(sess_id)
+        else:
+            return self._canvas_sess.get(sess_id) or self._trnx_sess.get(sess_id)
 
     def retrieve_session_by_name(self, name: str, sess_type: "SessionManager.SessionType" = None) -> Session:
-        if sess_type:
-            if sess_type == self.SessionType.FACTORY:
-                if self._proj_sess and self._proj_sess.name == name:
-                    return self._proj_sess
-                raise KeyError(f"Project with name {name} not found.")
-            elif sess_type == self.SessionType.TRNX:
-                for session in self._trnx_sess.values():
-                    if session.name == name:
-                        return session
-                raise KeyError(f"TRNX session with name {name} not found.")
-        else:
-            if self._proj_sess and self._proj_sess.name == name:
-                return self._proj_sess
+        if sess_type == self.SessionType.CANVAS or sess_type is None:
+            for session in self._canvas_sess.values():
+                if session.name == name:
+                    return session
+        if sess_type == self.SessionType.TRNX or sess_type is None:
             for session in self._trnx_sess.values():
                 if session.name == name:
                     return session
-            raise KeyError(f"Session with name {name} not found.")
+        raise KeyError(f"Session with name '{name}' not found.")
+
+    # ----------------------
+    # Convenience Accessors
+    # ----------------------
 
     @property
-    def project(self):
-        return self._proj_sess
+    def canvases(self) -> Dict[UUID, CanvasSession]:
+        return self._canvas_sess
 
     @property
-    def trnxs(self):
+    def trnxs(self) -> Dict[UUID, TRNXSession]:
         return self._trnx_sess
-    
+
     @property
-    def sessions(self):
-        sessions = []
-        if self._proj_sess is not None:
-            sessions.append(self._proj_sess)
-        sessions.extend(self._trnx_sess.values())
-        return sessions
+    def sessions(self) -> List[Session]:
+        return list(self._canvas_sess.values()) + list(self._trnx_sess.values())

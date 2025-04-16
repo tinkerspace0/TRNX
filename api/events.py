@@ -1,10 +1,10 @@
 # api/events.py
 from contextlib import asynccontextmanager
-from core.server.trenex import TrenexServer
+from core.controller import TrenexController
 
 @asynccontextmanager
 async def lifespan(app):
-    server = TrenexServer()
+    server = TrenexController()
     app.state._server = server
     print("TrenexServer initialized and attached to app.state")
     server.start()

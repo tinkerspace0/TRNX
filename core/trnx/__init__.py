@@ -1,3 +1,3 @@
 
 from .trnx import TRNX
-from .factory import TRNXEditor
+from .canvas import TrenexCanvas

@@ -5,7 +5,7 @@ from uuid import uuid4, UUID
 from typing import TYPE_CHECKING
 
 from core.trnx import TRNX
-from core.trnx import TRNXEditor
+from core.trnx import TrenexCanvas
 
 if TYPE_CHECKING:
     from .session_manager import SessionManager
@@ -45,7 +45,7 @@ class Session(ABC):
         self.worker = None
 
     @abstractmethod
-    def initialize(self):
+    def initialize(self, *args, **kwargs):
         """
         Session Initialization related code
         """
@@ -91,12 +91,12 @@ class TRNXSession(Session):
         else:
             print(f"TRNXSession '{self.name}' is not running.")
 
-    def initialize(self):
+    def initialize(self, *args, **kwargs):
         pass
         # self._exec = TRNX.load()
         # self.status = Session.SessionStatus.INITIALIZED
 
-class FactorySession(Session):
+class CanvasSession(Session):
     """
     Manages a TRNX factory (configuration) session.
     """
@@ -105,6 +105,6 @@ class FactorySession(Session):
         super().__init__(name, sess_type=SessionManager.SessionType.FACTORY)
         self.initialize()
 
-    def initialize(self):
-        self.worker = TRNXEditor(self.name)
+    def initialize(self, *args, **kwargs):
+        self.worker = TrenexCanvas(self.name)
         self.status = Session.SessionStatus.INITIALIZED
