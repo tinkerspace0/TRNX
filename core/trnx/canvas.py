@@ -15,7 +15,7 @@ class TrenexCanvas:
     - Once TRNX is built and running, nodes cannot be modified.
     - Users can modify an existing TRNX object only when it is stopped.
     """
-    def __init__(self, name: str):
+    def __init__(self, name: str, project_dir: str):
         self.name = name
         self._trnx: TRNX = None  # The TRNX instance
         self._node_configs: Dict[str, NodeConfig] = {}  # Dict of node configurations keyed by node name

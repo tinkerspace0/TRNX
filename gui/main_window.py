@@ -1,49 +1,63 @@
-from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QSplitter
+from PyQt6.QtWidgets import (
+    QMainWindow, QWidget, QTabWidget, QApplication,
+    QVBoxLayout, QLabel, QDialog
+)
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction
 
-from gui.widgets.session_panel import SessionPanel
-from gui.widgets.node_editor import NodeEditor
-from gui.widgets.log_panel import LogPanel
-
-
+from gui.widgets.canvas import Canvas
+from gui.dialogs.new_canvas_dialog import NewCanvasDialog
 from core.controller import TrenexController
 
 class TrenexMainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, controller: TrenexController):
         super().__init__()
         self.setWindowTitle("Trenex")
         self.resize(1200, 800)
+        self.controller = controller
+        self._init_ui()
+
+    def _init_ui(self):
+        self.tabs = QTabWidget()
+        self.tabs.setTabsClosable(True)
+        self.tabs.setMovable(True)
+        self.tabs.tabCloseRequested.connect(self._close_tab)
+        self.tabs.tabBar().setExpanding(False)
+        self.tabs.setStyleSheet("QTabWidget::tab-bar { alignment: left; }")
+        self.setCentralWidget(self.tabs)
         
-        # Instantiate our Trenex Controller
-        self.trenex = TrenexController()
-        
-        self.init_ui()
+        self._add_welcome_tab()
+        self._init_menu()
 
-    def init_ui(self):
-        # Create a container widget and layout
-        container = QWidget()
-        main_layout = QVBoxLayout(container)
+    def _add_welcome_tab(self):
+        w = QWidget()
+        l = QVBoxLayout(w)
+        lbl = QLabel(
+            "Welcome to Trenex!\n\n"
+            "Quick Start: File > New Canvas to begin."
+        )
+        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        l.addWidget(lbl)
+        self.tabs.addTab(w, "Welcome")
 
-        # Create a horizontal splitter for the session panel and node editor
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        
-        # Create the session panel on the left
-        self.session_panel = SessionPanel(backend=self.trenex, parent=self)
-        splitter.addWidget(self.session_panel)
-        splitter.setStretchFactor(0, 1)
+    def _init_menu(self):
+        file_menu = self.menuBar().addMenu("File")
+        new_act = QAction("New Canvas", self)
+        new_act.triggered.connect(self._new_canvas)
+        file_menu.addAction(new_act)
 
-        # Create the node editor widget for the center area
-        self.node_editor = NodeEditor()
-        splitter.addWidget(self.node_editor)
-        splitter.setStretchFactor(1, 4)
+    def _new_canvas(self):
+        dlg = NewCanvasDialog(self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            name, directory = dlg.get_values()
+            if not name or not directory:
+                return
+            # pass name & directory into your Canvas
+            canvas = Canvas(controller=self.controller, name=name, project_dir=directory)
+            idx = self.tabs.addTab(canvas, name)
+            self.tabs.setCurrentIndex(idx)
 
-        main_layout.addWidget(splitter)
-
-        # # Create the log panel at the bottom
-        # self.log_panel = LogPanel()
-        # main_layout.addWidget(self.log_panel)
-
-        self.setCentralWidget(container)
-
-    # def log(self, message):
-        # self.log_panel.append_log(message)
+    def _close_tab(self, idx: int):
+        self.tabs.removeTab(idx)
+        if self.tabs.count() == 0:
+            self._add_welcome_tab()

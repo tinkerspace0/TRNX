@@ -1,19 +1,23 @@
 import sys
 from PyQt6.QtWidgets import QApplication
 from .main_window import TrenexMainWindow
+from core.controller import TrenexController
 
 def main():
     app = QApplication(sys.argv)
-
-    # Load dark theme stylesheet if available
+    
+    # Optionally set a non-native style to help with QSS consistency
+    app.setStyle("Fusion")
+    
+    # Load and apply the dark theme stylesheet from file.
     try:
         with open("gui/assets/dark_theme.qss", "r") as f:
-            style = f.read()
-            app.setStyleSheet(style)
+            app.setStyleSheet(f.read())
     except Exception as e:
-        print("Could not load stylesheet:", e)
-
-    window = TrenexMainWindow()
+        print("Failed to load dark_theme.qss:", e)
+    
+    controller = TrenexController()
+    window = TrenexMainWindow(controller)
     window.show()
     sys.exit(app.exec())
 

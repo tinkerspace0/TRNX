@@ -1,9 +1,9 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QListWidget, QFileDialog
 
 class SessionPanel(QWidget):
-    def __init__(self, backend, parent=None):
+    def __init__(self, controller, parent=None):
         super().__init__(parent)
-        self.backend = backend
+        self.backend = controller
         self.parent_window = parent
         self.init_ui()
 
