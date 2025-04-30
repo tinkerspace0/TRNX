@@ -1,0 +1,3 @@
+[submodule "trenex-node-sdk"]
+	path = trenex-node-sdk
+	url = https://github.com/tinkerspace0/trenex-node-sdk.git
