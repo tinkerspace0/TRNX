@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QTabWidget, QApplication,
-    QVBoxLayout, QLabel, QDialog, QDockWidget
+    QMainWindow, QWidget, QTabWidget,
+    QVBoxLayout, QLabel, QDockWidget, QDialog
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction
@@ -15,11 +15,15 @@ class TrenexMainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Trenex")
         self.resize(1200, 800)
+        
         self.controller = controller
+        # Keep track of all dock widgets by name
+        self._docks: dict[str, QDockWidget] = {}
+        
         self._init_ui()
 
     def _init_ui(self):
-        # Central tabs
+        # — Central Tab Widget for canvases —
         self.tabs = QTabWidget()
         self.tabs.setTabsClosable(True)
         self.tabs.setMovable(True)
@@ -28,8 +32,19 @@ class TrenexMainWindow(QMainWindow):
         self.tabs.setStyleSheet("QTabWidget::tab-bar { alignment: left; }")
         self.setCentralWidget(self.tabs)
         self._add_welcome_tab()
-
-        # Dockable Node Package Manager
+        
+        # — Menus —
+        menubar = self.menuBar()
+        # File menu
+        file_menu = menubar.addMenu("File")
+        new_act = QAction("New Canvas", self)
+        new_act.triggered.connect(self._new_canvas)
+        file_menu.addAction(new_act)
+        # View menu
+        self.view_menu = menubar.addMenu("View")
+        
+        # — Dockable Panels —
+        # Node Package Manager
         npm_panel = NodePackageManagerPanel(controller=self.controller)
         npm_dock = QDockWidget("Node Package Manager", self)
         npm_dock.setWidget(npm_panel)
@@ -37,14 +52,27 @@ class TrenexMainWindow(QMainWindow):
             QDockWidget.DockWidgetFeature.DockWidgetMovable |
             QDockWidget.DockWidgetFeature.DockWidgetFloatable
         )
-        # dock on the left by default
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, npm_dock)
+        # register it under 'View' menu
+        self.register_dock(npm_dock, "Node Package Manager", Qt.DockWidgetArea.LeftDockWidgetArea)
 
-        # File menu
-        file_menu = self.menuBar().addMenu("File")
-        new_act = QAction("New Canvas", self)
-        new_act.triggered.connect(self._new_canvas)
-        file_menu.addAction(new_act)
+    def register_dock(self, dock: QDockWidget, name: str, area: Qt.DockWidgetArea):
+        """
+        Add a QDockWidget to the main window and create a corresponding
+        toggle action under the View menu.
+        """
+        # 1. Add to main window in the given dock area
+        self.addDockWidget(area, dock)
+        # 2. Keep reference
+        self._docks[name] = dock
+        # 3. Create a checkable menu action
+        act = QAction(name, self, checkable=True)
+        act.setChecked(dock.isVisible())
+        # toggling the menu action shows/hides the dock
+        act.toggled.connect(dock.setVisible)
+        # when the dock is shown/hidden by other means, sync the action
+        dock.visibilityChanged.connect(lambda vis, a=act: a.setChecked(vis))
+        # 4. Add to View menu
+        self.view_menu.addAction(act)
 
     def _add_welcome_tab(self):
         w = QWidget()
