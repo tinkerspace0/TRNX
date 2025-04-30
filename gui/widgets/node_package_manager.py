@@ -3,11 +3,12 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QListWidget, QPushButton, QHBoxLayout, QInputDialog
 from PyQt6.QtCore import Qt
 
+from core.controller import TrenexController
 class NodePackageManagerPanel(QWidget):
     """
     A dockable panel for listing and installing node packages.
     """
-    def __init__(self, controller, parent=None):
+    def __init__(self, controller: TrenexController, parent=None):
         super().__init__(parent)
         self.controller = controller
         self.init_ui()
@@ -24,8 +25,8 @@ class NodePackageManagerPanel(QWidget):
 
         # Buttons row
         btn_row = QHBoxLayout()
-        install_btn = QPushButton("Install Package…")
-        install_btn.clicked.connect(self.on_install)
+        install_btn = QPushButton("Import")
+        install_btn.clicked.connect(self.on_import)
         refresh_btn = QPushButton("Refresh")
         refresh_btn.clicked.connect(self.refresh_list)
         btn_row.addWidget(install_btn)
@@ -41,11 +42,11 @@ class NodePackageManagerPanel(QWidget):
         """
         self.pkg_list.clear()
         # For now, stubbed: you might call self.controller.list_packages()
-        pkgs = self.controller.list_installed_packages() if hasattr(self.controller, "list_installed_packages") else []
+        pkgs = self.controller.npm.list_nodes() if hasattr(self.controller.npm, "list_nodes") else []
         for p in pkgs:
             self.pkg_list.addItem(p)
 
-    def on_install(self):
+    def on_import(self):
         """
         Ask for a package name and then install it via the controller (stubbed).
         """
