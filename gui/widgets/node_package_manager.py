@@ -1,12 +1,16 @@
-# gui/widgets/node_package_manager.py
-
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QListWidget, QPushButton, QHBoxLayout, QInputDialog
+from PyQt6.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel, QListWidget,
+    QPushButton, QDialog, QHBoxLayout
+)
 from PyQt6.QtCore import Qt
 
+from gui.dialogs.import_node_dialog import ImportNodeDialog
+
 from core.controller import TrenexController
+
 class NodePackageManagerPanel(QWidget):
     """
-    A dockable panel for listing and installing node packages.
+    A dockable panel for listing and importing node packages.
     """
     def __init__(self, controller: TrenexController, parent=None):
         super().__init__(parent)
@@ -24,35 +28,43 @@ class NodePackageManagerPanel(QWidget):
         layout.addWidget(self.pkg_list)
 
         # Buttons row
-        btn_row = QHBoxLayout()
-        install_btn = QPushButton("Import")
+        btn_row = QWidget()
+        hl = QHBoxLayout(btn_row)
+        hl.setContentsMargins(0,0,0,0)
+        install_btn = QPushButton("Import…")
         install_btn.clicked.connect(self.on_import)
         refresh_btn = QPushButton("Refresh")
         refresh_btn.clicked.connect(self.refresh_list)
-        btn_row.addWidget(install_btn)
-        btn_row.addWidget(refresh_btn)
-        layout.addLayout(btn_row)
+        hl.addWidget(install_btn)
+        hl.addWidget(refresh_btn)
+        layout.addWidget(btn_row)
 
         # initial population
         self.refresh_list()
 
     def refresh_list(self):
         """
-        Refresh the package list from the controller (stubbed).
+        Refresh the package list from the controller.
         """
         self.pkg_list.clear()
-        # For now, stubbed: you might call self.controller.list_packages()
-        pkgs = self.controller.npm.list_nodes() if hasattr(self.controller.npm, "list_nodes") else []
-        for p in pkgs:
-            self.pkg_list.addItem(p)
+        if hasattr(self.controller.npm, "list_nodes"):
+            for p in self.controller.npm.list_nodes():
+                self.pkg_list.addItem(p)
 
     def on_import(self):
         """
-        Ask for a package name and then install it via the controller (stubbed).
+        Show ImportNodeDialog to pick a file/folder, then import.
         """
-        pkg, ok = QInputDialog.getText(self, "Install Package", "Package name:")
-        if ok and pkg:
-            # stub: you might call self.controller.install_package(pkg)
-            success = getattr(self.controller, "install_package", lambda x: False)(pkg)
-            if success:
-                self.refresh_list()
+        dlg = ImportNodeDialog(self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            path = dlg.get_path()
+            if not path:
+                return
+            # Delegate to your controller/npm
+            try:
+                self.controller.npm.import_node_package(path)
+            except:
+                # Handle import error
+                print(f"Failed to import node package from {path}")
+            
+            self.refresh_list()
