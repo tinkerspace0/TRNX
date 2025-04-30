@@ -7,7 +7,7 @@ from core.node.node_base import Node, NodeConfig
 from .trnx import TRNX
 
 
-class TRNXEditor:
+class TrenexCanvas:
     """
     Node-based Factory for building TRNX trading bots.
     
@@ -15,7 +15,7 @@ class TRNXEditor:
     - Once TRNX is built and running, nodes cannot be modified.
     - Users can modify an existing TRNX object only when it is stopped.
     """
-    def __init__(self, name: str):
+    def __init__(self, name: str, project_dir: str):
         self.name = name
         self._trnx: TRNX = None  # The TRNX instance
         self._node_configs: Dict[str, NodeConfig] = {}  # Dict of node configurations keyed by node name

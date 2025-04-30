@@ -1,0 +1,72 @@
+/* gui/assets/dark_theme.qss */
+
+/* General Dark Theme */
+QWidget {
+    background-color: #2b2b2b;
+    color: #e0e0e0;
+    font-family: Helvetica, Arial, sans-serif;
+}
+
+/* QMenuBar and QMenu */
+QMenuBar {
+    background-color: #3c3c3c;
+}
+QMenuBar::item {
+    spacing: 3px;
+    padding: 5px 10px;
+    background: transparent;
+}
+QMenuBar::item:selected {
+    background: #5a5a5a;
+}
+QMenu {
+    background-color: #3c3c3c;
+    border: 1px solid #5a5a5a;
+    padding: 5px;
+}
+QMenu::item:selected {
+    background-color: #5a5a5a;
+}
+
+/* QTabWidget Styles */
+QTabWidget::pane {
+    border: 1px solid #555;
+    background: #2b2b2b;
+}
+QTabBar::tab {
+    background: #3c3c3c;
+    color: #e0e0e0;
+    border: 1px solid #555;
+    padding: 5px 10px;
+    margin: 2px;
+}
+QTabBar::tab:selected {
+    background: #5a5a5a;
+    border-bottom: 2px solid #d0d0d0;
+}
+QTabWidget::tab-bar {
+    /* Override native macOS centered alignment */
+    alignment: left;
+}
+
+/* QDockWidget title bar */
+QDockWidget::title {
+    text-align: center;
+    background: #3c3c3c;
+    padding: 5px;
+}
+
+/* QPushButton */
+QPushButton {
+    background-color: #3c3c3c;
+    border: 1px solid #555;
+    padding: 5px;
+}
+QPushButton:hover {
+    background-color: #5a5a5a;
+}
+
+/* Additional widget customizations */
+QLabel {
+    color: #e0e0e0;
+}

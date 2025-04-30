@@ -1,0 +1,1 @@
+from . new_canvas_dialog import NewCanvasDialog
