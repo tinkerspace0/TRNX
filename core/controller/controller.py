@@ -6,7 +6,7 @@ from uuid import UUID
 
 from core.debug.logger import gl_logger
 from core.session import SessionManager
-from core.node.manager import NodeManager
+from trenex_node_sdk.node.manager import NodeManager
 
 
 class TrenexController:
