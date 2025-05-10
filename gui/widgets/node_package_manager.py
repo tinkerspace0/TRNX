@@ -19,9 +19,9 @@ class NodePackageManagerPanel(QWidget):
 
     def init_ui(self):
         layout = QVBoxLayout(self)
-        title = QLabel("Node Package Manager")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(title)
+        # title = QLabel("Node Package Manager")
+        # title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # layout.addWidget(title)
 
         # List of installed packages
         self.pkg_list = QListWidget()
