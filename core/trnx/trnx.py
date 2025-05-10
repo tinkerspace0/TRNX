@@ -1,5 +1,5 @@
 from typing import List
-from core.node.node_base import Node
+from trenex_node_sdk.node import Node
 from core.debug.logger import gl_logger as logger
 import networkx as nx
 import threading

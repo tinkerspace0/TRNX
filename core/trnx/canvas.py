@@ -2,8 +2,8 @@ import networkx as nx
 from typing import List, Dict
 
 from core.debug.logger import gl_logger
-from core.node.node_io import IOConnection, IO
-from core.node.node_base import Node, NodeConfig
+from trenex_node_sdk.node.node_io import IOConnection, IO
+from trenex_node_sdk.node.node_base import Node, NodeConfig
 from .trnx import TRNX
 
 

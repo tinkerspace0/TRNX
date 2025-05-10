@@ -3,10 +3,11 @@
 from enum import Enum
 from typing import Tuple
 from uuid import UUID
+import os
 
 from core.debug.logger import gl_logger
 from core.session import SessionManager
-from core.node.manager import NodeManager
+from trenex_node_sdk.node import NodePackageManager
 
 
 class TrenexController:
@@ -19,7 +20,8 @@ class TrenexController:
 
     def __init__(self):
         self.name = "Trenex"
-        self._nm: NodeManager = NodeManager()
-        self._ssm: SessionManager = SessionManager()
+        self.npm: NodePackageManager = NodePackageManager(os.getcwd()
+)
+        self.ssm: SessionManager = SessionManager()
         
         gl_logger.info(f"TrenexController initialized.")
